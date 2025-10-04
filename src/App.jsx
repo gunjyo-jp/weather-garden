@@ -75,6 +75,21 @@ function App() {
 
   const [weatherData,setWeatherData] = useState(null);
   const user =   { lat: 31.56028, lon: 130.55806 };
+
+
+  function fetchData({weatherData,setWeatherData,user}){
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${user.lat}&lon=${user.lon}&appid=${apiKey}&units=metric&lang=ja`)
+      .then(res => {
+        res.json();
+        console.log(res);
+    })
+      .then(json => {
+        setWeatherData(json)
+        console.log(weatherData);
+      });
+      // console.log(weatherData);
+    }
+
   
 
   useEffect(() => {
