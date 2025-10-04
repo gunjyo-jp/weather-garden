@@ -15,7 +15,6 @@
   left: 0;
   width: 100%;
   height: 20%;
-  /* border: 1px solid green; /* デバッグ用に枠線を表示すると範囲が分かりやすいです */
 }
 
 /* 空中エリア */
@@ -25,13 +24,12 @@
   left: 0;
   width: 100%;
   height: 50%;
-  /* border: 1px solid blue; /* デバッグ用に枠線を表示すると範囲が分かりやすいです */
 }
 
 /* キャラクターのスタイル */
 .character {
   position: absolute;
-  width: 150px; /* キャラクターの基本サイズ */
+  width: 150px;
   height: auto;
 }
 
@@ -45,14 +43,81 @@
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
-.weather-icon {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 5px;
+/* 天気アイコン表示用のスタイル */
+.weather-icon-display {
+  width: 250px;
+  height: auto;
 }
 
 .location {
-  font-size: 18px;
+  font-size: 24px;
+}
+
+/* メニュー関連のスタイル */
+.menu-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+.menu-button {
+  width: 100px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.menu-bar-line {
+  width: 100%;
+  height: 4px;
+  background-color: #333;
+  border-radius: 2px;
+}
+
+.menu-bar {
+  position: absolute;
+  top: 65px;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 150px;
+  padding: 10px 0;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.menu-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  font-family: sans-serif;
+  font-size: 16px;
+}
+
+.menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* フェードインアニメーションの定義 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

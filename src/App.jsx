@@ -5,7 +5,6 @@ import { weatherAssets } from './utils/imageLoader';
 // Vite環境で.envファイルからAPIキーを読み込む
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 
-// (placeCharactersWithoutOverlap関数は変更なし)
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
   if (!characters || characters.length === 0) return [];
@@ -51,8 +50,10 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
 function App() {
   const [weather, setWeather] = useState('sunny');
   const [location, setLocation] = useState(null);
+  const [weatherData, setWeatherData] = useState(null);
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // useEffect 1: 位置情報の取得
   useEffect(() => {
@@ -64,8 +65,8 @@ function App() {
         });
       },
       () => {
-        // 取得失敗時はデフォルト位置を設定
-        setLocation({ lat: 31.56028, lon: 130.55806 });
+        // 取得失敗時はデフォルト位置（例: 東京駅）を設定
+        setLocation({ lat: 35.6895, lon: 139.6917 });
       }
     );
   }, []);
@@ -79,6 +80,8 @@ function App() {
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&appid=${apiKey}&units=metric&lang=ja`);
         if (!response.ok) throw new Error('APIからの応答がありません');
         const data = await response.json();
+        
+        setWeatherData(data);
 
         const weatherId = data.weather[0].id;
         let newWeather = 'sunny';
@@ -97,25 +100,28 @@ function App() {
   useEffect(() => {
     const assets = weatherAssets[weather];
     if (!assets) return;
-
     const groundOptions = { placementType: 'ground', horizontalRange: [15, 85] };
     const groundChars = placeCharactersWithoutOverlap(assets.characters.ground, 2, groundOptions);
     setGroundCharacters(groundChars);
-
     const skyOptions = { placementType: 'sky', horizontalRange: [15, 85] };
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
   }, [weather]);
 
-  // ★ 変更点1: クリック処理用の関数を定義
   const handleCharacterClick = (character) => {
     const fileName = character.src.split('/').pop();
     alert(`クリックされたキャラクター: ${fileName}`);
   };
 
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
   const backgroundStyle = {
     backgroundImage: `url(${weatherAssets[weather]?.background})`,
   };
+  
+  const currentWeatherIcon = weatherAssets[weather]?.icon;
 
   return (
     <div className="app-container" style={backgroundStyle}>
@@ -127,7 +133,6 @@ function App() {
             alt={`character-${index}`}
             className="character"
             style={char.style}
-            // ★ 変更点2: onClickイベントを追加
             onClick={() => handleCharacterClick(char)}
           />
         ))}
@@ -140,14 +145,33 @@ function App() {
             alt={`character-${index}`}
             className="character"
             style={char.style}
-            // ★ 変更点2: onClickイベントを追加
             onClick={() => handleCharacterClick(char)}
           />
         ))}
       </div>
       <div className="weather-info">
-        <div>① 天気のアイコン</div>
-        <div>② 場所</div>
+        {currentWeatherIcon && (
+          <img src={currentWeatherIcon} alt={`${weather} icon`} className="weather-icon-display" />
+        )}
+        {weatherData && (
+          <div className="location">{weatherData.name}</div>
+        )}
+      </div>
+
+      <div className="menu-container">
+        <div className="menu-button" onClick={toggleMenu}>
+          <span className="menu-bar-line"></span>
+          <span className="menu-bar-line"></span>
+          <span className="menu-bar-line"></span>
+        </div>
+
+        {isMenuOpen && (
+          <div className="menu-bar">
+            <div className="menu-item">設定</div>
+            <div className="menu-item">図鑑</div>
+            <div className="menu-item">ヘルプ</div>
+          </div>
+        )}
       </div>
     </div>
   );
