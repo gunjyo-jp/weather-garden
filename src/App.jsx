@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
+import infoUrban from './data'
 
 // --- 重なりをチェックしてキャラクターを配置する関数を定義 ---
 /**
@@ -71,9 +72,22 @@ function App() {
   // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
+  const user =[
+  {lat: 31.56028, lon: 130.55806}
+]
 
   useEffect(() => {
     const assets = weatherAssets[weather];
+    
+    
+    navigator.geolocation.getCurrentPosition((position) => {
+      user.lat = position.coords.latitude;
+      user.lon = position.coords.longitude;
+      console.log(user.lon,user.lat);
+    
+  },()=>{
+      console.log("位置情報を取得できませんでした。");}
+      
     if (!assets) return;
 
     // 地面のキャラクターを2体配置
@@ -123,6 +137,8 @@ function App() {
       </div>
     </div>
   );
+
+
 }
 
 export default App;
