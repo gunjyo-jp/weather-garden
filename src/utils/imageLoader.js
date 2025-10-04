@@ -22,23 +22,24 @@ import background_snowy from '../assets/background/background_snowy.png';
 
 
 // 天気ごとのデータをオブジェクトにまとめる
+// 天気ごとのデータをオブジェクトにまとめる
 export const weatherAssets = {
   sunny: {
     background: background_sunny,
-    characters: [
-      bug_mitsubachi,
-      butterfly,
-      hibiscus,
-      himawari,
-      marigold,
-      tentomushi,
-      tonbo,
-    ],
+    // キャラクターを種類別に分ける
+    characters: {
+      ground: [hibiscus, himawari, marigold, tentomushi], // 地面に配置するもの
+      sky: [bug_mitsubachi, butterfly, tonbo], // 空中に配置するもの
+    },
   },
   cloudy: {
     background: background_cloudy,
-    characters: [ajisai, flog, kanahebi, katatsumuri, mimizu],
+    characters: {
+      ground: [ajisai, flog, kanahebi, katatsumuri, mimizu],
+      sky: [], // 曇りの日に飛ぶものがなければ空にする
+    },
   },
+
   rainy: {
     background: background_rainy,
     characters: [ajisai, flog, kanahebi, katatsumuri, mimizu],

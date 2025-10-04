@@ -1,42 +1,59 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* アプリケーション全体のコンテナ */
+.app-container {
+  position: relative; /* 子要素を絶対配置するための基準点 */
+  width: 100vw;
+  height: 100vh;
+  background-size: cover; /* 背景画像を画面いっぱいに表示 */
+  background-position: center; /* 背景画像を中央に配置 */
+  overflow: hidden; /* 画面からはみ出した要素を非表示 */
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* 庭エリア（地面） */
+.garden {
+  position: absolute;
+  bottom: 3%;
+  left: 0;
+  width: 100%;
+  height: 40%;
+  /* border: 1px solid green; /* デバッグ用 */
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* 空中エリア */
+.sky {
+  position: absolute;
+  top: 10%; /* 画面上部から10%の位置から開始 */
+  left: 0;
+  width: 100%;
+  height: 50%; /* 画面の高さの50%を空中エリアとする */
+  /* border: 1px solid blue; /* デバッグ用 */
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+/* キャラクターのスタイル */
+.character {
+  position: absolute; /* 親要素(.garden)を基準に位置を決める */
+  width: 200px; /* キャラクターの基本サイズ（調整してください）*/
+  height: auto;
+  transition: all 0.3s ease; /* アニメーション効果（任意） */
 }
 
-.card {
-  padding: 2em;
+/* 天気情報のエリア */
+.weather-info {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 15px;
+  background-color: rgba(255, 255, 255, 0.7); /* 半透明の背景 */
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  font-family: sans-serif;
 }
 
-.read-the-docs {
-  color: #888;
+.weather-icon {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.location {
+  font-size: 18px;
 }
