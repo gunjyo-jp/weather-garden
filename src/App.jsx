@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
-import infoUrban from './data'
+// Vite環境で.envファイルからAPIキーを読み込む
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const user = { lat: 31.56028, lon: 130.55806 };
 
@@ -101,23 +101,29 @@ function App() {
 
 
   useEffect(() => {
-    if (!weatherData) return;
-    const weatherType = weatherData.weather[0].main;
-    let weather ="";
+    if (!location) return;
 
-    if (weatherType === "Clear") {
-      weather = "sunny";
-      
-    }
-    else if (weatherType === "Clouds") {
-      weather = "cloudy";
-    }
-    else {
-     weather = "rainy";
-    }
+    const fetchWeather = async () => {
+      try {
+        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&appid=${apiKey}&units=metric&lang=ja`);
+        if (!response.ok) throw new Error('APIからの応答がありません');
+        const data = await response.json();
 
-    setWeatherType(weather);
+        const weatherId = data.weather[0].id;
+        let newWeather = 'sunny';
+        if (weatherId >= 200 && weatherId < 600) newWeather = 'rainy';
+        else if (weatherId >= 801 && weatherId < 900) newWeather = 'cloudy';
+        
+        setWeather(newWeather);
+      } catch (error) {
+        console.error("天気情報の取得に失敗:", error);
+      }
+    };
+    fetchWeather();
+  }, [location]);
 
+  // useEffect 3: キャラクターの配置
+  useEffect(() => {
     const assets = weatherAssets[weather];
     if (!assets) return;
 
@@ -136,9 +142,13 @@ function App() {
     };
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
+  }, [weather]);
 
-    
-  }, [weatherData]);
+  // ★ 変更点1: クリック処理用の関数を定義
+  const handleCharacterClick = (character) => {
+    const fileName = character.src.split('/').pop();
+    alert(`クリックされたキャラクター: ${fileName}`);
+  };
 
   const backgroundStyle = {
     backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
