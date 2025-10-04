@@ -1,13 +1,9 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
-import infoUrban from './data';
 
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
-const url_users_db = "http://localhost:3001/user";
-const url_creatures_db = "http://localhost:3001/creature";
 
-// キャラクターを重ならないように配置
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
   if (!characters || characters.length === 0) return [];
@@ -18,7 +14,6 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   const minLeft = horizontalRange[0];
   const maxLeft = horizontalRange[1];
   const availableWidth = maxLeft - minLeft - characterWidth;
-
   for (const charSrc of selected) {
     let attempts = 0;
     let isOverlapping;
@@ -37,19 +32,20 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
     } while (isOverlapping && attempts < maxAttempts);
     placed.push({ ...position, src: charSrc });
   }
-
   return placed.map(char => {
     const style = {
       left: `${char.left}%`,
       transform: `scale(${Math.random() * 0.5 + 0.8})`,
     };
-    if (placementType === 'ground') style.bottom = `${Math.random() * 15}%`;
-    else style.top = `${Math.random() * 85}%`;
+    if (placementType === 'ground') {
+      style.bottom = `${Math.random() * 15}%`;
+    } else {
+      style.top = `${Math.random() * 85}%`;
+    }
     return { src: char.src, style };
   });
 };
 
-// OpenWeatherMapアイコンから天気タイプを取得
 const mapApiIconToWeatherType = (iconCode) => {
   const firstTwoChars = iconCode.slice(0, 2);
   if (firstTwoChars === '01') return 'sunny';
@@ -69,20 +65,19 @@ function App() {
   const [capturedCharacter, setCapturedCharacter] = useState(null);
   const [respawnQueue, setRespawnQueue] = useState([]);
   const [activeMenu, setActiveMenu] = useState(null);
-  const [userInfo, setUserInfo] = useState(null);
 
-  // 位置情報取得
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
-      (position) => setLocation({ lat: position.coords.latitude, lon: position.coords.longitude }),
+      (position) => {
+        setLocation({ lat: position.coords.latitude, lon: position.coords.longitude });
+      },
       () => {
         console.log("位置情報を取得できませんでした。");
-        setLocation({ lat: 31.56028, lon: 130.55806 });
+        setLocation({ lat: 31.56028, lon: 130.55806 }); // 失敗時は鹿児島
       }
     );
   }, []);
 
-  // 天気情報取得
   useEffect(() => {
     if (!location) return;
     const fetchAllWeatherData = async () => {
@@ -103,7 +98,6 @@ function App() {
     fetchAllWeatherData();
   }, [location]);
 
-  // キャラクター配置
   useEffect(() => {
     if (!weatherData) return;
     const weatherMain = weatherData.weather[0].main;
@@ -114,15 +108,15 @@ function App() {
 
     const assets = weatherAssets[newWeather];
     if (!assets) return;
-
-    const groundChars = placeCharactersWithoutOverlap(assets.characters.ground, 2, { placementType: 'ground', horizontalRange: [15, 85] });
-    const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, { placementType: 'sky', horizontalRange: [15, 85] });
+    const groundOptions = { placementType: 'ground', horizontalRange: [15, 85] };
+    const groundChars = placeCharactersWithoutOverlap(assets.characters.ground, 2, groundOptions);
     setGroundCharacters(groundChars);
+    const skyOptions = { placementType: 'sky', horizontalRange: [15, 85] };
+    const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
     setRespawnQueue([]);
   }, [weatherData]);
-
-  // キャラクター再出現処理
+  
   useEffect(() => {
     const respawnInterval = setInterval(() => {
       const now = Date.now();
@@ -149,12 +143,15 @@ function App() {
           const maxAttempts = 50;
           do {
             isOverlapping = false;
-            const tempCharacterArray = placeCharactersWithoutOverlap([randomCharSrc], 1, { placementType: type, horizontalRange: [15, 85] });
+            const tempCharacterArray = placeCharactersWithoutOverlap([randomCharSrc], 1, {
+              placementType: type,
+              horizontalRange: [15, 85],
+            });
             newCharacter = tempCharacterArray[0];
             for (const existingChar of allCurrentCharacters) {
               const newLeft = parseFloat(newCharacter.style.left);
               const existingLeft = parseFloat(existingChar.style.left);
-              if (Math.abs(newLeft - existingLeft) < 15) {
+              if (Math.abs(newLeft - existingLeft) < 15) { 
                 isOverlapping = true;
                 break;
               }
@@ -162,8 +159,11 @@ function App() {
             attempts++;
           } while (isOverlapping && attempts < maxAttempts);
           if (!isOverlapping) {
-            if (type === 'ground') setGroundCharacters(prev => [...prev, newCharacter]);
-            else setSkyCharacters(prev => [...prev, newCharacter]);
+            if (type === 'ground') {
+              setGroundCharacters(prev => [...prev, newCharacter]);
+            } else {
+              setSkyCharacters(prev => [...prev, newCharacter]);
+            }
             setRespawnQueue(prev => prev.filter(item => item.id !== respawnEvent.id));
           }
         }
@@ -177,14 +177,17 @@ function App() {
   const closeModal = () => {
     if (!capturedCharacter) return;
     const RESPAWN_DELAY = 3 * 60 * 1000;
-    const isGround = weatherAssets[weatherType].characters.ground.includes(capturedCharacter.src);
+    const isGround = weatherAssets[weatherType].characters.ground.some(src => src === capturedCharacter.src);
     const type = isGround ? 'ground' : 'sky';
-    setRespawnQueue(prev => [...prev, { id: Date.now(), respawnTime: Date.now() + RESPAWN_DELAY, type }]);
+    setRespawnQueue(prevQueue => [...prevQueue, { id: Date.now(), respawnTime: Date.now() + RESPAWN_DELAY, type: type }]);
     setGroundCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
     setSkyCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
     setCapturedCharacter(null);
   };
-  const openMenuModal = (menuName) => { setActiveMenu(menuName); setIsMenuOpen(false); };
+  const openMenuModal = (menuName) => {
+    setActiveMenu(menuName);
+    setIsMenuOpen(false);
+  };
   const closeMenuModal = () => setActiveMenu(null);
   const menuContent = {
     '天気': 'ここに天気の詳細情報（週間予報など）が表示されます。',
@@ -193,82 +196,93 @@ function App() {
     '設定': 'ここに各種設定項目が表示されます。',
     'ヘルプ': 'ここにゲームの遊び方やお問い合わせ情報が表示されます。',
   };
-
   const backgroundStyle = { backgroundImage: `url(${weatherAssets[weatherType]?.background})` };
   const currentWeatherIcon = weatherAssets[weatherType]?.icon;
 
-  // DB操作関数
-  function fetchDb({ url, setState }) {
-    fetch(url).then(res => res.json()).then(json => setState(json)).catch(err => console.error("GET Error:", err));
-  }
-  function addDb({ url, data, onSuccess }) {
-    fetch(url, { method: "POST", headers: { "Accept": "application/json", "Content-Type": "application/json" }, body: JSON.stringify(data) })
-      .then(res => res.json()).then(json => { if (onSuccess) onSuccess(json); }).catch(err => console.error("POST Error:", err));
-  }
-  function updateDb({ url, id, data, onSuccess }) {
-    fetch(`${url}/${id}`, { method: "PUT", headers: { "Accept": "application/json", "Content-Type": "application/json" }, body: JSON.stringify(data) })
-      .then(res => res.json()).then(json => { if (onSuccess) onSuccess(json); }).catch(err => console.error("PUT Error:", err));
-  }
-  function deleteDb({ url, id, onSuccess }) {
-    fetch(`${url}/${id}`, { method: "DELETE" }).then(() => { if (onSuccess) onSuccess(); }).catch(err => console.error("DELETE Error:", err));
-  }
-
-  // CRUDボタンコンポーネント
-  function CrudTestButtons({ setUserInfo }) {
-    const handleGet = () => fetchDb({ url: url_users_db, setState: setUserInfo });
-    const handleAdd = () => {
-      const newUser = { userid: Date.now(), username: "new_user_" + Math.floor(Math.random() * 100), friend: [], weather: "Clear", geted: [] };
-      addDb({ url: url_users_db, data: newUser, onSuccess: () => fetchDb({ url: url_users_db, setState: setUserInfo }) });
-    };
-    const handleUpdate = () => {
-      const targetId = prompt("更新したいユーザーのidを入力");
-      const newName = prompt("新しいusernameを入力");
-      if (!targetId || !newName) return;
-      updateDb({ url: url_users_db, id: targetId, data: { username: newName }, onSuccess: () => fetchDb({ url: url_users_db, setState: setUserInfo }) });
-    };
-    const handleDelete = () => {
-      const targetId = prompt("削除したいユーザーのidを入力");
-      if (!targetId) return;
-      deleteDb({ url: url_users_db, id: targetId, onSuccess: () => fetchDb({ url: url_users_db, setState: setUserInfo }) });
-    };
-    return (
-      <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
-        <button onClick={handleGet}>GET（取得）</button>
-        <button onClick={handleAdd}>POST（追加）</button>
-        <button onClick={handleUpdate}>PUT（更新）</button>
-        <button onClick={handleDelete}>DELETE（削除）</button>
-      </div>
-    );
-  }
-
   return (
-    <>
-      <CrudTestButtons setUserInfo={setUserInfo} />
-      <pre>{JSON.stringify(userInfo, null, 2)}</pre>
-
-      <div className="app-container" style={backgroundStyle}>
-        {/* 空中エリア */}
-        <div className="sky">
-          {skyCharacters.map((char) => (
-            <img key={`sky-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
-          ))}
-        </div>
-
-        {/* 地面エリア */}
-        <div className="garden">
-          {groundCharacters.map((char) => (
-            <img key={`ground-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
-          ))}
-        </div>
-
-        {/* 天気情報 */}
-        <div className="weather-info">
+    <div className="app-container" style={backgroundStyle}>
+      <div className="sky">
+        {skyCharacters.map((char) => (
+          <img key={`sky-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+        ))}
+      </div>
+      <div className="garden">
+        {groundCharacters.map((char) => (
+          <img key={`ground-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+        ))}
+      </div>
+      <div className="weather-info">
+        <div className="current-weather">
           {currentWeatherIcon && <img src={currentWeatherIcon} alt={`${weatherType} icon`} className="weather-icon-display" />}
           {weatherData && <div className="location">{weatherData.name}</div>}
         </div>
+        <div className="forecast-container">
+          {forecastData && forecastData.list.slice(0, 3).map((forecast, index) => {
+            const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
+            const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
+            return (
+              <div key={index} className="forecast-item">
+                <span className="forecast-time">{(index + 1) * 3}時間後</span>
+                {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </>
+      <div className="menu-container">
+        <div className="menu-button" onClick={toggleMenu}>
+          <span className="menu-bar-line"></span>
+          <span className="menu-bar-line"></span>
+          <span className="menu-bar-line"></span>
+        </div>
+        {isMenuOpen && (
+          <div className="menu-bar">
+            <div className="menu-item" onClick={() => openMenuModal('天気')}>天気</div>
+            <div className="menu-item" onClick={() => openMenuModal('図鑑')}>図鑑</div>
+            <div className="menu-item" onClick={() => openMenuModal('フレンド')}>フレンド</div>
+            <div className="menu-item" onClick={() => openMenuModal('設定')}>設定</div>
+            <div className="menu-item" onClick={() => openMenuModal('ヘルプ')}>ヘルプ</div>
+          </div>
+        )}
+      </div>
+      {capturedCharacter && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>キャラクターをゲット！</h2>
+            <img src={capturedCharacter.src} alt="ゲットしたキャラクター" className="captured-character-image" />
+            <p>{capturedCharacter.src.split('/').pop().replace(/\.\w+$/, '')}</p>
+            <button onClick={closeModal}>閉じる</button>
+          </div>
+        </div>
+      )}
+      {activeMenu && (
+        <div className="modal-overlay" onClick={closeMenuModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>{activeMenu}</h2>
+            {activeMenu === '天気' ? (
+              <div className="weather-forecast-details">
+                {forecastData ? forecastData.list.slice(0, 5).map((forecast, index) => {
+                  const time = new Date(forecast.dt * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                  const temp = Math.round(forecast.main.temp);
+                  const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
+                  const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
+                  return (
+                    <div key={index} className="forecast-detail-item">
+                      <span className="forecast-detail-time">{time}</span>
+                      {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
+                      <span className="forecast-detail-temp">{temp}°C</span>
+                    </div>
+                  );
+                }) : <p>予報データを読み込み中です...</p>}
+              </div>
+            ) : (
+              <p className="menu-modal-content">{menuContent[activeMenu]}</p>
+            )}
+            <button onClick={closeMenuModal}>閉じる</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
-
 export default App;
