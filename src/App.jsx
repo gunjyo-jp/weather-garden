@@ -54,6 +54,7 @@ function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [capturedCharacter, setCapturedCharacter] = useState(null);
   const [respawnQueue, setRespawnQueue] = useState([]);
+  const [activeMenu, setActiveMenu] = useState(null);
 
   // useEffect 1: 位置情報と天気の初期取得
   useEffect(() => {
@@ -67,7 +68,6 @@ function App() {
       },
       () => {
         console.log("位置情報を取得できませんでした。");
-        // 位置情報取得に失敗した場合、デフォルト（鹿児島）で天気を取得
         fetch(`https://api.openweathermap.org/data/2.5/weather?lat=31.56028&lon=130.55806&appid=${apiKey}&units=metric&lang=ja`)
           .then(res => res.json())
           .then(json => {
@@ -165,7 +165,7 @@ function App() {
           }
         }
       }
-    }, 1000); // 1秒ごとにチェック
+    }, 1000);
 
     return () => clearInterval(respawnInterval);
   }, [respawnQueue, groundCharacters, skyCharacters, weatherType]);
@@ -198,6 +198,22 @@ function App() {
     setSkyCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
 
     setCapturedCharacter(null);
+  };
+
+  const openMenuModal = (menuName) => {
+    setActiveMenu(menuName);
+    setIsMenuOpen(false);
+  };
+  const closeMenuModal = () => {
+    setActiveMenu(null);
+  };
+  
+  const menuContent = {
+    '天気': 'ここに天気の詳細情報（週間予報など）が表示されます。',
+    '図鑑': 'ここにゲットしたキャラクターの一覧が表示されます。',
+    'フレンド': 'ここにフレンドリストが表示されます。',
+    '設定': 'ここに各種設定項目が表示されます。',
+    'ヘルプ': 'ここにゲームの遊び方やお問い合わせ情報が表示されます。',
   };
 
   const backgroundStyle = {
@@ -250,9 +266,11 @@ function App() {
 
         {isMenuOpen && (
           <div className="menu-bar">
-            <div className="menu-item">設定</div>
-            <div className="menu-item">図鑑</div>
-            <div className="menu-item">ヘルプ</div>
+            <div className="menu-item" onClick={() => openMenuModal('天気')}>天気</div>
+            <div className="menu-item" onClick={() => openMenuModal('図鑑')}>図鑑</div>
+            <div className="menu-item" onClick={() => openMenuModal('フレンド')}>フレンド</div>
+            <div className="menu-item" onClick={() => openMenuModal('設定')}>設定</div>
+            <div className="menu-item" onClick={() => openMenuModal('ヘルプ')}>ヘルプ</div>
           </div>
         )}
       </div>
@@ -268,6 +286,16 @@ function App() {
             />
             <p>{capturedCharacter.src.split('/').pop().replace(/\.\w+$/, '')}</p>
             <button onClick={closeModal}>閉じる</button>
+          </div>
+        </div>
+      )}
+
+      {activeMenu && (
+        <div className="modal-overlay" onClick={closeMenuModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>{activeMenu}</h2>
+            <p className="menu-modal-content">{menuContent[activeMenu]}</p>
+            <button onClick={closeMenuModal}>閉じる</button>
           </div>
         </div>
       )}
