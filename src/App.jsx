@@ -252,7 +252,6 @@ function deleteDb({ url, id, onSuccess }) {
     .catch((err) => console.error("DELETE Error:", err));
 }
 
-  
 function CrudTestButtons({ setUserInfo }) {
   // ① GET
   function handleGet() {
@@ -312,6 +311,21 @@ function CrudTestButtons({ setUserInfo }) {
       },
     });
   }
+
+  return (
+    <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+      <button onClick={handleGet}>GET（取得）</button>
+      <button onClick={handleAdd}>POST（追加）</button>
+      <button onClick={handleUpdate}>PUT（更新）</button>
+      <button onClick={handleDelete}>DELETE（削除）</button>
+    </div>
+  );
+}
+
+
+
+  
+
 
   return (
     <div className="app-container" style={backgroundStyle}>
