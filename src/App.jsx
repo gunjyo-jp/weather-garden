@@ -1,46 +1,33 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
+
 import infoUrban from './data'
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const user = { lat: 31.56028, lon: 130.55806 };
 
+// Vite環境で.envファイルからAPIキーを読み込む
+const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 
-/**
- * 指定されたエリア内で、キャラクターが重ならないように配置します。
- * @param {Array<string>} characters - 配置するキャラクター画像の配列
- * @param {number} count - 配置する数
- * @param {object} options - 配置オプション (placementType, horizontalRange)
- * @returns {Array<object>} - スタイル情報を含んだキャラクターの配列
- */
+// (placeCharactersWithoutOverlap関数は変更なし)
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
-  // デフォルト値を設定
-  const {
-    placementType = 'ground',
-    horizontalRange = [0, 100], // デフォルトは画面全体 [開始地点, 終了地点]
-  } = options;
-
+  const { placementType = 'ground', horizontalRange = [0, 100] } = options;
   if (!characters || characters.length === 0) return [];
 
   const placed = [];
   const characterWidth = 15;
   const maxAttempts = 50;
   const selected = [...characters].sort(() => 0.5 - Math.random()).slice(0, count);
-
-  // 配置範囲を計算
   const minLeft = horizontalRange[0];
   const maxLeft = horizontalRange[1];
   const availableWidth = maxLeft - minLeft - characterWidth;
-
   for (const charSrc of selected) {
     let attempts = 0;
     let isOverlapping;
     let position;
     do {
       isOverlapping = false;
-      // 指定された範囲内で 'left' の値を計算する
       const left = availableWidth > 0 ? (Math.random() * availableWidth) + minLeft : minLeft;
-
       position = { left, right: left + characterWidth };
       for (const p of placed) {
         if (position.left < p.right && position.right > p.left) {
@@ -52,16 +39,15 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
     } while (isOverlapping && attempts < maxAttempts);
     placed.push({ ...position, src: charSrc });
   }
-
   return placed.map(char => {
     const style = {
       left: `${char.left}%`,
       transform: `scale(${Math.random() * 0.5 + 0.8})`,
     };
     if (placementType === 'ground') {
-      style.bottom = `${Math.random() * 15}%`; // 地面キャラは 'bottom' を基準
+      style.bottom = `${Math.random() * 15}%`;
     } else {
-      style.top = `${Math.random() * 85}%`; // 空中キャラは 'top' を基準
+      style.top = `${Math.random() * 85}%`;
     }
     return { src: char.src, style };
   });
@@ -117,28 +103,26 @@ function App() {
     }
 
     setWeatherType(weather);
-
+    
     const assets = weatherAssets[weather];
     if (!assets) return;
 
-    // 地面のキャラクターを左右の範囲を限定して配置
-    const groundOptions = {
-      placementType: 'ground',
-      horizontalRange: [15, 85], // 左端15%〜右端85%の範囲に配置
-    };
+    const groundOptions = { placementType: 'ground', horizontalRange: [15, 85] };
     const groundChars = placeCharactersWithoutOverlap(assets.characters.ground, 2, groundOptions);
     setGroundCharacters(groundChars);
 
-    // 空のキャラクターも同じ左右の範囲に限定して配置
-    const skyOptions = {
-      placementType: 'sky',
-      horizontalRange: [15, 85],
-    };
+    const skyOptions = { placementType: 'sky', horizontalRange: [15, 85] };
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
-
+  }, [weather]);
     
-  }, [weatherData]);
+
+  // ★ 変更点1: クリック処理用の関数を定義
+  const handleCharacterClick = (character) => {
+    const fileName = character.src.split('/').pop();
+    alert(`クリックされたキャラクター: ${fileName}`);
+  };
+
 
   const backgroundStyle = {
     backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
@@ -146,7 +130,6 @@ function App() {
 
   return (
     <div className="app-container" style={backgroundStyle}>
-      {/* 空中エリア */}
       <div className="sky">
         {skyCharacters.map((char, index) => (
           <img
@@ -155,11 +138,11 @@ function App() {
             alt={`character-${index}`}
             className="character"
             style={char.style}
+            // ★ 変更点2: onClickイベントを追加
+            onClick={() => handleCharacterClick(char)}
           />
         ))}
       </div>
-
-      {/* 地面エリア */}
       <div className="garden">
         {groundCharacters.map((char, index) => (
           <img
@@ -168,11 +151,11 @@ function App() {
             alt={`character-${index}`}
             className="character"
             style={char.style}
+            // ★ 変更点2: onClickイベントを追加
+            onClick={() => handleCharacterClick(char)}
           />
         ))}
       </div>
-
-      {/* 天気情報エリア */}
       <div className="weather-info">
         <div>① 天気のアイコン</div>
         <div>② 場所</div>
