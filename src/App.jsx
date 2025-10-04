@@ -3,7 +3,7 @@ import './App.css';
 import { weatherAssets } from './utils/imageLoader';
 import infoUrban from './data'
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
-const user =  { lat: 31.56028, lon: 130.55806 };
+const user = { lat: 31.56028, lon: 130.55806 };
 
 
 /**
@@ -21,7 +21,7 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   } = options;
 
   if (!characters || characters.length === 0) return [];
-  
+
   const placed = [];
   const characterWidth = 15;
   const maxAttempts = 50;
@@ -40,7 +40,7 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
       isOverlapping = false;
       // 指定された範囲内で 'left' の値を計算する
       const left = availableWidth > 0 ? (Math.random() * availableWidth) + minLeft : minLeft;
-      
+
       position = { left, right: left + characterWidth };
       for (const p of placed) {
         if (position.left < p.right && position.right > p.left) {
@@ -68,44 +68,57 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
 };
 
 function App() {
-  const [weather,setWeather] = useState('sunny');
+  const [weatherType,setWeatherType] = useState('sunny');
+  // let weather = "Sunny";
   // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
 
-  const [weatherData,setWeatherData] = useState(null);
-  const user =   { lat: 31.56028, lon: 130.55806 };
+  const [weatherData, setWeatherData] = useState(null);
+  const user = { lat: 31.56028, lon: 130.55806 };
 
 
-  function fetchData({weatherData,setWeatherData,user}){
-      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${user.lat}&lon=${user.lon}&appid=${apiKey}&units=metric&lang=ja`)
-      .then(res => {
-        res.json();
-        console.log(res);
-    })
-      .then(json => {
-        setWeatherData(json)
-        console.log(weatherData);
-      });
-      // console.log(weatherData);
-    }
 
-  
-
+  //起動時のレンダリング
   useEffect(() => {
-    const assets = weatherAssets[weather];
-
-
     navigator.geolocation.getCurrentPosition((position) => {
       user.lat = position.coords.latitude;
       user.lon = position.coords.longitude;
       console.log(user.lon, user.lat);
 
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${user.lat}&lon=${user.lon}&appid=${apiKey}&units=metric&lang=ja`)
+        .then(res => res.json())
+        .then(json => {
+          setWeatherData(json);
+        });
+
     }, () => {
       console.log("位置情報を取得できませんでした。");
     });
+    //API取得
+  }, []);
+
+
+
+  useEffect(() => {
+    if (!weatherData) return;
+    const weatherType = weatherData.weather[0].main;
+    let weather ="";
+
+    if (weatherType === "Clear") {
+      weather = "sunny";
       
-    fetchData({weatherData,setWeatherData,user});
+    }
+    else if (weatherType === "Clouds") {
+      weather = "cloudy";
+    }
+    else {
+     weather = "rainy";
+    }
+
+    setWeatherType(weather);
+
+    const assets = weatherAssets[weather];
     if (!assets) return;
 
     // 地面のキャラクターを左右の範囲を限定して配置
@@ -124,10 +137,11 @@ function App() {
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
 
-  }, []);
+    
+  }, [weatherData]);
 
   const backgroundStyle = {
-    backgroundImage: `url(${weatherAssets[weather]?.background})`,
+    backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
   };
 
   return (
