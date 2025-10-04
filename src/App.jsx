@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
+import infoUrban from './data'
 
 /**
  * 指定されたエリア内で、キャラクターが重ならないように配置します。
@@ -68,6 +69,9 @@ function App() {
   const [location, setLocation] = useState(null);
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
+  const user =[
+  {lat: 31.56028, lon: 130.55806}
+]
 
   // useEffect その1: 位置情報の取得用（最初に1回だけ実行）
   useEffect(() => {
@@ -86,6 +90,16 @@ function App() {
   // useEffect その2: キャラクターの配置用（weatherが変わるたびに実行）
   useEffect(() => {
     const assets = weatherAssets[weather];
+    
+    
+    navigator.geolocation.getCurrentPosition((position) => {
+      user.lat = position.coords.latitude;
+      user.lon = position.coords.longitude;
+      console.log(user.lon,user.lat);
+    
+  },()=>{
+      console.log("位置情報を取得できませんでした。");}
+      
     if (!assets) return;
 
     // 地面のキャラクターを左右の範囲を限定して配置
@@ -145,6 +159,8 @@ function App() {
       </div>
     </div>
   );
+
+
 }
 
 export default App;
