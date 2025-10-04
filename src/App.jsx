@@ -176,6 +176,7 @@ function addDb({ url, data, onSuccess }) {
 
 // 更新（PUT）
 function updateDb({ url, id, data, onSuccess }) {
+  console.log(`${url}/${id}`);
   fetch(`${url}/${id}`, {
     method: "PUT",
     headers: {
@@ -232,11 +233,13 @@ function CrudTestButtons({ setUserInfo }) {
   function handleUpdate() {
     const targetId = prompt("更新したいユーザーのidを入力");
     const newName = prompt("新しいusernameを入力");
+
+
     if (!targetId || !newName) return;
 
     updateDb({
       url: url_users_db,
-      id: targetId,
+      id: Number(targetId),
       data: { username: newName },
     
       onSuccess: () => {
