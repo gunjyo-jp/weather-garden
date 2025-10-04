@@ -1,39 +1,38 @@
 /* アプリケーション全体のコンテナ */
 .app-container {
-  position: relative; /* 子要素を絶対配置するための基準点 */
+  position: relative;
   width: 100vw;
   height: 100vh;
-  background-size: cover; /* 背景画像を画面いっぱいに表示 */
-  background-position: center; /* 背景画像を中央に配置 */
-  overflow: hidden; /* 画面からはみ出した要素を非表示 */
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
 }
 
 /* 庭エリア（地面） */
 .garden {
   position: absolute;
-  bottom: 3%;
+  bottom: 1%;
   left: 0;
   width: 100%;
-  height: 40%;
-  /* border: 1px solid green; /* デバッグ用 */
+  height: 20%;
+  /* border: 1px solid green; /* デバッグ用に枠線を表示すると範囲が分かりやすいです */
 }
 
 /* 空中エリア */
 .sky {
   position: absolute;
-  top: 10%; /* 画面上部から10%の位置から開始 */
+  top: 10%;
   left: 0;
   width: 100%;
-  height: 50%; /* 画面の高さの50%を空中エリアとする */
-  /* border: 1px solid blue; /* デバッグ用 */
+  height: 50%;
+  /* border: 1px solid blue; /* デバッグ用に枠線を表示すると範囲が分かりやすいです */
 }
 
 /* キャラクターのスタイル */
 .character {
-  position: absolute; /* 親要素(.garden)を基準に位置を決める */
-  width: 200px; /* キャラクターの基本サイズ（調整してください）*/
+  position: absolute;
+  width: 150px; /* キャラクターの基本サイズ */
   height: auto;
-  transition: all 0.3s ease; /* アニメーション効果（任意） */
 }
 
 /* 天気情報のエリア */
@@ -42,7 +41,7 @@
   top: 20px;
   left: 20px;
   padding: 15px;
-  background-color: rgba(255, 255, 255, 0.7); /* 半透明の背景 */
+  background-color: rgba(255, 255, 255, 0.7);
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   font-family: sans-serif;
