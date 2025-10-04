@@ -20,32 +20,42 @@ import background_cloudy from '../assets/background/background_cloudy.png';
 import background_rainy from '../assets/background/background_rainy.png';
 import background_snowy from '../assets/background/background_snowy.png';
 
+// 天気アイコン画像のインポート
+import icon_sunny from '../assets/weather/sunny.jpg';
+import icon_cloudy from '../assets/weather/cloudy.jpg';
+import icon_rainy from '../assets/weather/rainy.jpg';
 
-// 天気ごとのデータをオブジェクトにまとめる
 // 天気ごとのデータをオブジェクトにまとめる
 export const weatherAssets = {
   sunny: {
     background: background_sunny,
-    // キャラクターを種類別に分ける
+    icon: icon_sunny,
     characters: {
-      ground: [hibiscus, himawari, marigold, tentomushi], // 地面に配置するもの
-      sky: [bug_mitsubachi, butterfly, tonbo], // 空中に配置するもの
+      ground: [hibiscus, himawari, marigold, tentomushi],
+      sky: [bug_mitsubachi, butterfly, tonbo],
     },
   },
   cloudy: {
     background: background_cloudy,
+    icon: icon_cloudy,
     characters: {
       ground: [ajisai, flog, kanahebi, katatsumuri, mimizu],
-      sky: [], // 曇りの日に飛ぶものがなければ空にする
+      sky: [],
     },
   },
-
   rainy: {
     background: background_rainy,
-    characters: [ajisai, flog, kanahebi, katatsumuri, mimizu],
+    icon: icon_rainy,
+    characters: {
+      ground: [ajisai, flog, kanahebi, katatsumuri, mimizu],
+      sky: []
+    },
   },
   snowy: {
     background: background_snowy,
-    characters: [], // 雪の日のキャラクターがいればここに追加
+    characters: {
+      ground: [],
+      sky: []
+    },
   },
 };

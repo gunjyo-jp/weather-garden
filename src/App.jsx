@@ -1,46 +1,26 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
-import infoUrban from './data'
+
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
-const user = { lat: 31.56028, lon: 130.55806 };
 
-
-/**
- * 指定されたエリア内で、キャラクターが重ならないように配置します。
- * @param {Array<string>} characters - 配置するキャラクター画像の配列
- * @param {number} count - 配置する数
- * @param {object} options - 配置オプション (placementType, horizontalRange)
- * @returns {Array<object>} - スタイル情報を含んだキャラクターの配列
- */
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
-  // デフォルト値を設定
-  const {
-    placementType = 'ground',
-    horizontalRange = [0, 100], // デフォルトは画面全体 [開始地点, 終了地点]
-  } = options;
-
+  const { placementType = 'ground', horizontalRange = [0, 100] } = options;
   if (!characters || characters.length === 0) return [];
-
   const placed = [];
   const characterWidth = 15;
   const maxAttempts = 50;
   const selected = [...characters].sort(() => 0.5 - Math.random()).slice(0, count);
-
-  // 配置範囲を計算
   const minLeft = horizontalRange[0];
   const maxLeft = horizontalRange[1];
   const availableWidth = maxLeft - minLeft - characterWidth;
-
   for (const charSrc of selected) {
     let attempts = 0;
     let isOverlapping;
     let position;
     do {
       isOverlapping = false;
-      // 指定された範囲内で 'left' の値を計算する
       const left = availableWidth > 0 ? (Math.random() * availableWidth) + minLeft : minLeft;
-
       position = { left, right: left + characterWidth };
       for (const p of placed) {
         if (position.left < p.right && position.right > p.left) {
@@ -52,131 +32,245 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
     } while (isOverlapping && attempts < maxAttempts);
     placed.push({ ...position, src: charSrc });
   }
-
   return placed.map(char => {
     const style = {
       left: `${char.left}%`,
       transform: `scale(${Math.random() * 0.5 + 0.8})`,
     };
     if (placementType === 'ground') {
-      style.bottom = `${Math.random() * 15}%`; // 地面キャラは 'bottom' を基準
+      style.bottom = `${Math.random() * 15}%`;
     } else {
-      style.top = `${Math.random() * 85}%`; // 空中キャラは 'top' を基準
+      style.top = `${Math.random() * 85}%`;
     }
     return { src: char.src, style };
   });
 };
 
 function App() {
-  const [weatherType,setWeatherType] = useState('sunny');
-  // let weather = "Sunny";
-  // stateを地面用と空中用に分ける
+  const [weatherType, setWeatherType] = useState('sunny');
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
-
   const [weatherData, setWeatherData] = useState(null);
-  const user = { lat: 31.56028, lon: 130.55806 };
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [capturedCharacter, setCapturedCharacter] = useState(null);
+  const [respawnQueue, setRespawnQueue] = useState([]);
 
-
-
-  //起動時のレンダリング
+  // useEffect 1: 位置情報と天気の初期取得
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition((position) => {
-      user.lat = position.coords.latitude;
-      user.lon = position.coords.longitude;
-      console.log(user.lon, user.lat);
-
-      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${user.lat}&lon=${user.lon}&appid=${apiKey}&units=metric&lang=ja`)
-        .then(res => res.json())
-        .then(json => {
-          setWeatherData(json);
-        });
-
-    }, () => {
-      console.log("位置情報を取得できませんでした。");
-    });
-    //API取得
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}&appid=${apiKey}&units=metric&lang=ja`)
+          .then(res => res.json())
+          .then(json => {
+            setWeatherData(json);
+          });
+      },
+      () => {
+        console.log("位置情報を取得できませんでした。");
+        // 位置情報取得に失敗した場合、デフォルト（鹿児島）で天気を取得
+        fetch(`https://api.openweathermap.org/data/2.5/weather?lat=31.56028&lon=130.55806&appid=${apiKey}&units=metric&lang=ja`)
+          .then(res => res.json())
+          .then(json => {
+            setWeatherData(json);
+          });
+      }
+    );
   }, []);
 
-
-
+  // useEffect 2: 天気の変化に応じたキャラクターの初期配置
   useEffect(() => {
     if (!weatherData) return;
-    const weatherType = weatherData.weather[0].main;
-    let weather ="";
+    const weatherMain = weatherData.weather[0].main;
+    let newWeather = "rainy";
 
-    if (weatherType === "Clear") {
-      weather = "sunny";
-      
+    if (weatherMain === "Clear") {
+      newWeather = "sunny";
+    } else if (weatherMain === "Clouds") {
+      newWeather = "cloudy";
     }
-    else if (weatherType === "Clouds") {
-      weather = "cloudy";
-    }
-    else {
-     weather = "rainy";
-    }
+    setWeatherType(newWeather);
 
-    setWeatherType(weather);
-
-    const assets = weatherAssets[weather];
+    const assets = weatherAssets[newWeather];
     if (!assets) return;
 
-    // 地面のキャラクターを左右の範囲を限定して配置
-    const groundOptions = {
-      placementType: 'ground',
-      horizontalRange: [15, 85], // 左端15%〜右端85%の範囲に配置
-    };
+    const groundOptions = { placementType: 'ground', horizontalRange: [15, 85] };
     const groundChars = placeCharactersWithoutOverlap(assets.characters.ground, 2, groundOptions);
     setGroundCharacters(groundChars);
 
-    // 空のキャラクターも同じ左右の範囲に限定して配置
-    const skyOptions = {
-      placementType: 'sky',
-      horizontalRange: [15, 85],
-    };
+    const skyOptions = { placementType: 'sky', horizontalRange: [15, 85] };
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
 
-    
+    setRespawnQueue([]);
   }, [weatherData]);
+  
+  // useEffect 3: キャラクターの再出現を処理
+  useEffect(() => {
+    const respawnInterval = setInterval(() => {
+      const now = Date.now();
+      const MAX_CHARS = 3;
+      const totalCharacters = groundCharacters.length + skyCharacters.length;
+
+      if (totalCharacters < MAX_CHARS && respawnQueue.length > 0) {
+        const respawnEvent = respawnQueue.find(item => item.respawnTime <= now);
+        
+        if (respawnEvent) {
+          const assets = weatherAssets[weatherType];
+          if (!assets) return;
+
+          const type = respawnEvent.type;
+          
+          const onScreenSrcs = [...groundCharacters, ...skyCharacters].map(char => char.src);
+          const potentialRespawns = (type === 'ground') ? assets.characters.ground : assets.characters.sky;
+          const availableCharacters = potentialRespawns.filter(src => !onScreenSrcs.includes(src));
+
+          if (availableCharacters.length === 0) {
+            setRespawnQueue(prev => prev.filter(item => item.id !== respawnEvent.id));
+            return;
+          }
+          
+          const randomCharSrc = availableCharacters[Math.floor(Math.random() * availableCharacters.length)];
+          const allCurrentCharacters = [...groundCharacters, ...skyCharacters];
+          let newCharacter;
+          let isOverlapping;
+          let attempts = 0;
+          const maxAttempts = 50;
+
+          do {
+            isOverlapping = false;
+            const tempCharacterArray = placeCharactersWithoutOverlap([randomCharSrc], 1, {
+              placementType: type,
+              horizontalRange: [15, 85],
+            });
+            newCharacter = tempCharacterArray[0];
+
+            for (const existingChar of allCurrentCharacters) {
+              const newLeft = parseFloat(newCharacter.style.left);
+              const existingLeft = parseFloat(existingChar.style.left);
+              if (Math.abs(newLeft - existingLeft) < 15) { 
+                isOverlapping = true;
+                break;
+              }
+            }
+            attempts++;
+          } while (isOverlapping && attempts < maxAttempts);
+          
+          if (!isOverlapping) {
+            if (type === 'ground') {
+              setGroundCharacters(prev => [...prev, newCharacter]);
+            } else {
+              setSkyCharacters(prev => [...prev, newCharacter]);
+            }
+            setRespawnQueue(prev => prev.filter(item => item.id !== respawnEvent.id));
+          }
+        }
+      }
+    }, 1000); // 1秒ごとにチェック
+
+    return () => clearInterval(respawnInterval);
+  }, [respawnQueue, groundCharacters, skyCharacters, weatherType]);
+
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleCharacterClick = (character) => {
+    setCapturedCharacter(character);
+  };
+
+  const closeModal = () => {
+    if (!capturedCharacter) return;
+    const RESPAWN_DELAY = 1 * 10 * 1000;
+
+    const isGround = weatherAssets[weatherType].characters.ground.some(src => src === capturedCharacter.src);
+    const type = isGround ? 'ground' : 'sky';
+
+    setRespawnQueue(prevQueue => [
+      ...prevQueue,
+      {
+        id: Date.now(),
+        respawnTime: Date.now() + RESPAWN_DELAY,
+        type: type,
+      },
+    ]);
+
+    setGroundCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
+    setSkyCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
+
+    setCapturedCharacter(null);
+  };
 
   const backgroundStyle = {
     backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
   };
 
+  const currentWeatherIcon = weatherAssets[weatherType]?.icon;
+
   return (
     <div className="app-container" style={backgroundStyle}>
-      {/* 空中エリア */}
       <div className="sky">
         {skyCharacters.map((char, index) => (
           <img
-            key={`sky-${index}`}
+            key={`sky-${index}-${char.style.left}`}
             src={char.src}
-            alt={`character-${index}`}
+            alt="character"
             className="character"
             style={char.style}
+            onClick={() => handleCharacterClick(char)}
           />
         ))}
       </div>
-
-      {/* 地面エリア */}
       <div className="garden">
         {groundCharacters.map((char, index) => (
           <img
-            key={`ground-${index}`}
+            key={`ground-${index}-${char.style.left}`}
             src={char.src}
-            alt={`character-${index}`}
+            alt="character"
             className="character"
             style={char.style}
+            onClick={() => handleCharacterClick(char)}
           />
         ))}
       </div>
-
-      {/* 天気情報エリア */}
       <div className="weather-info">
-        <div>① 天気のアイコン</div>
-        <div>② 場所</div>
+        {currentWeatherIcon && (
+          <img src={currentWeatherIcon} alt={`${weatherType} icon`} className="weather-icon-display" />
+        )}
+        {weatherData && (
+          <div className="location">{weatherData.name}</div>
+        )}
       </div>
+
+      <div className="menu-container">
+        <div className="menu-button" onClick={toggleMenu}>
+          <span className="menu-bar-line"></span>
+          <span className="menu-bar-line"></span>
+          <span className="menu-bar-line"></span>
+        </div>
+
+        {isMenuOpen && (
+          <div className="menu-bar">
+            <div className="menu-item">設定</div>
+            <div className="menu-item">図鑑</div>
+            <div className="menu-item">ヘルプ</div>
+          </div>
+        )}
+      </div>
+
+      {capturedCharacter && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>キャラクターをゲット！</h2>
+            <img 
+              src={capturedCharacter.src} 
+              alt="ゲットしたキャラクター" 
+              className="captured-character-image"
+            />
+            <p>{capturedCharacter.src.split('/').pop().replace(/\.\w+$/, '')}</p>
+            <button onClick={closeModal}>閉じる</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
