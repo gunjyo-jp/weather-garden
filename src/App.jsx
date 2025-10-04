@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
 import infoUrban from './data'
+const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
+
+  const user =  { lat: 31.56028, lon: 130.55806 };
+  
 
 // --- 重なりをチェックしてキャラクターを配置する関数を定義 ---
 /**
@@ -68,26 +72,31 @@ const placeCharactersWithoutOverlap = (characters, count) => {
 
 
 function App() {
-  const [weather] = useState('sunny');
+  const weather = 'sunny';
   // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
-  const user = [
-    { lat: 31.56028, lon: 130.55806 }
-  ]
+  const [weatherData,setWeatherData] = useState(null);
+
+
 
   useEffect(() => {
     const assets = weatherAssets[weather];
 
+    //OpenWeatherAPIで気象データを取得
+    
 
     navigator.geolocation.getCurrentPosition((position) => {
       user.lat = position.coords.latitude;
       user.lon = position.coords.longitude;
       console.log(user.lon, user.lat);
+      console.log(user);
 
     }, () => {
       console.log("位置情報を取得できませんでした。");
     });
+    
+    fetchData({weatherData,setWeatherData,user});
       
     if (!assets) return;
 
@@ -99,7 +108,23 @@ function App() {
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1);
     setSkyCharacters(skyChars);
 
-  }, [weather]);
+  }, []);
+
+
+
+  function fetchData({user}){
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${user.lat}&lon=${user.lon}&appid=${apiKey}&units=metric&lang=ja`)
+      .then(res => {
+        res.json();
+      })
+      .then(json => {
+        setWeatherData(json)
+        console.log(json);
+      });
+
+      // console.log(weatherData);
+    }
+
 
   const backgroundStyle = {
     backgroundImage: `url(${weatherAssets[weather].background})`,
