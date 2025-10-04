@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import { weatherAssets } from './utils/imageLoader';
 
+import infoUrban from './data'
+const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
+const user = { lat: 31.56028, lon: 130.55806 };
+
 // Vite環境で.envファイルからAPIキーを読み込む
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 
@@ -9,6 +13,7 @@ const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
   if (!characters || characters.length === 0) return [];
+
   const placed = [];
   const characterWidth = 15;
   const maxAttempts = 50;
@@ -49,52 +54,56 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
 };
 
 function App() {
-  const [weather, setWeather] = useState('sunny');
-  const [location, setLocation] = useState(null);
+  const [weatherType,setWeatherType] = useState('sunny');
+  // let weather = "Sunny";
+  // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
 
-  // useEffect 1: 位置情報の取得
+  const [weatherData, setWeatherData] = useState(null);
+  const user = { lat: 31.56028, lon: 130.55806 };
+
+
+
+  //起動時のレンダリング
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
+    navigator.geolocation.getCurrentPosition((position) => {
+      user.lat = position.coords.latitude;
+      user.lon = position.coords.longitude;
+      console.log(user.lon, user.lat);
+
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${user.lat}&lon=${user.lon}&appid=${apiKey}&units=metric&lang=ja`)
+        .then(res => res.json())
+        .then(json => {
+          setWeatherData(json);
         });
-      },
-      () => {
-        // 取得失敗時はデフォルト位置を設定
-        setLocation({ lat: 31.56028, lon: 130.55806 });
-      }
-    );
+
+    }, () => {
+      console.log("位置情報を取得できませんでした。");
+    });
+    //API取得
   }, []);
 
-  // useEffect 2: 天気情報の取得
+
+
   useEffect(() => {
-    if (!location) return;
+    if (!weatherData) return;
+    const weatherType = weatherData.weather[0].main;
+    let weather ="";
 
-    const fetchWeather = async () => {
-      try {
-        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&appid=${apiKey}&units=metric&lang=ja`);
-        if (!response.ok) throw new Error('APIからの応答がありません');
-        const data = await response.json();
+    if (weatherType === "Clear") {
+      weather = "sunny";
+      
+    }
+    else if (weatherType === "Clouds") {
+      weather = "cloudy";
+    }
+    else {
+     weather = "rainy";
+    }
 
-        const weatherId = data.weather[0].id;
-        let newWeather = 'sunny';
-        if (weatherId >= 200 && weatherId < 600) newWeather = 'rainy';
-        else if (weatherId >= 801 && weatherId < 900) newWeather = 'cloudy';
-        
-        setWeather(newWeather);
-      } catch (error) {
-        console.error("天気情報の取得に失敗:", error);
-      }
-    };
-    fetchWeather();
-  }, [location]);
-
-  // useEffect 3: キャラクターの配置
-  useEffect(() => {
+    setWeatherType(weather);
+    
     const assets = weatherAssets[weather];
     if (!assets) return;
 
@@ -106,6 +115,7 @@ function App() {
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
   }, [weather]);
+    
 
   // ★ 変更点1: クリック処理用の関数を定義
   const handleCharacterClick = (character) => {
@@ -113,8 +123,9 @@ function App() {
     alert(`クリックされたキャラクター: ${fileName}`);
   };
 
+
   const backgroundStyle = {
-    backgroundImage: `url(${weatherAssets[weather]?.background})`,
+    backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
   };
 
   return (
