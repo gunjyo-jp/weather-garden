@@ -199,6 +199,120 @@ function App() {
   const backgroundStyle = { backgroundImage: `url(${weatherAssets[weatherType]?.background})` };
   const currentWeatherIcon = weatherAssets[weatherType]?.icon;
 
+  function fetchDb({ url, setState }) {
+  fetch(url)
+    .then((res) => res.json())
+    .then((json) => setState(json))
+    .catch((err) => console.error("GET Error:", err));
+}
+
+// 追加（POST）
+function addDb({ url, data, onSuccess }) {
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+    .then((res) => res.json())
+    .then((json) => {
+      if (onSuccess) onSuccess(json);
+    })
+    .catch((err) => console.error("POST Error:", err));
+}
+
+// 更新（PUT）
+function updateDb({ url, id, data, onSuccess }) {
+  console.log(`${url}/${id}`);
+  fetch(`${url}/${id}`, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+    .then((res) => res.json())
+    .then((json) => {
+      if (onSuccess) onSuccess(json);
+    })
+    .catch((err) => console.error("PUT Error:", err));
+}
+
+// 削除（DELETE）
+function deleteDb({ url, id, onSuccess }) {
+  fetch(`${url}/${id}`, {
+    method: "DELETE",
+  })
+    .then(() => {
+      if (onSuccess) onSuccess();
+    })
+    .catch((err) => console.error("DELETE Error:", err));
+}
+
+  
+function CrudTestButtons({ setUserInfo }) {
+  // ① GET
+  function handleGet() {
+    fetchDb({ url: url_users_db, setState: setUserInfo });
+  }
+
+  // ② POST（新規追加）
+  function handleAdd() {
+    const newUser = {
+      userid: Date.now(),
+      username: "new_user_" + Math.floor(Math.random() * 100),
+      friend: [],
+      weather: "Clear",
+      geted: [],
+    };
+    addDb({
+      url: url_users_db,
+      data: newUser,
+      onSuccess: () => {
+        console.log("追加成功");
+        fetchDb({ url: url_users_db, setState: setUserInfo });
+      },
+    });
+  }
+
+  // ③ PUT（更新）
+  function handleUpdate() {
+    const targetId = prompt("更新したいユーザーのidを入力");
+    const newName = prompt("新しいusernameを入力");
+
+
+    if (!targetId || !newName) return;
+
+    updateDb({
+      url: url_users_db,
+      id: Number(targetId),
+      data: { username: newName },
+    
+      onSuccess: () => {
+        console.log("更新成功");
+        fetchDb({ url: url_users_db, setState: setUserInfo });
+      },
+    });
+  }
+
+  // ④ DELETE（削除）
+  function handleDelete() {
+    const targetId = prompt("削除したいユーザーのidを入力");
+    if (!targetId) return;
+
+    deleteDb({
+      url: url_users_db,
+      id: targetId,
+      onSuccess: () => {
+        console.log("削除成功");
+        fetchDb({ url: url_users_db, setState: setUserInfo });
+      },
+    });
+  }
+
   return (
     <div className="app-container" style={backgroundStyle}>
       <div className="sky">
