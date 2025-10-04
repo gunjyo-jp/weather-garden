@@ -1,0 +1,45 @@
+{
+  "user": [
+    {
+      "username": "omagari",
+      "id": "1"
+    },
+    {
+      "id": "2",
+      "username": "yusei",
+      "friend": [
+        "gunji"
+      ],
+      "weather": "Clouds",
+      "geted": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "id": "d35c",
+      "userid": 1759577197826,
+      "username": "new_user_27",
+      "friend": [],
+      "weather": "Clear",
+      "geted": []
+    },
+    {
+      "id": "8e7d",
+      "userid": 1759578031005,
+      "username": "new_user_55",
+      "friend": [],
+      "weather": "Clear",
+      "geted": []
+    }
+  ],
+  "creature": [
+    {
+      "id": "1",
+      "creaturename": "frogg",
+      "description": "雨の日だけ来るよ",
+      "img": "/image/frog.img"
+    }
+  ]
+}
