@@ -1,0 +1,29 @@
+{
+  "user":[
+    {
+      "userid":1,
+      "username":"gunji",
+      "friend":["yusei"],
+      "weather":"Clear" ,   
+      "geted":[1,3,4]
+    },
+       {
+      "userid":2,
+      "username":"yusei",
+      "friend":["gunji"],
+      "weather":"Clouds", 
+      "geted":[2,3,4]  
+    }
+
+  ],
+  "creature":[
+    {
+      "id":1,
+      "creaturename":"frogg",
+      "description":"雨の日だけ来るよ",
+      "img":"/image/frog.img"
+
+    }
+  ]
+  
+}

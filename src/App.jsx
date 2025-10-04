@@ -4,6 +4,7 @@ import { weatherAssets } from './utils/imageLoader';
 import infoUrban from './data'
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const user = { lat: 31.56028, lon: 130.55806 };
+const url_users_db = "http://localhost:3001/tasks";
 
 
 /**
@@ -73,8 +74,10 @@ function App() {
   // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
-
   const [weatherData, setWeatherData] = useState(null);
+
+
+  const [userInfo,setUserInfo] = useState(null);
   const user = { lat: 31.56028, lon: 130.55806 };
 
 
@@ -144,7 +147,27 @@ function App() {
     backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
   };
 
+  
+  function fetchUsers({url,setState}) {
+    fetch(url).then(res => res.json()).then(json => (setState(json))).catch(err =>(console.error(err)));
+  }
+
+  function Button({userInfo,setUserInfo}){
+    function onClick(){
+      fetchUsers(url_users_db,setUserInfo);
+      console.log(userInfo);  
+    }
+
+    return (
+      <>
+      <button onClick={onClick}>push</button>
+      </>
+    )
+
+  }
   return (
+    <>
+    <Button />
     <div className="app-container" style={backgroundStyle}>
       {/* 空中エリア */}
       <div className="sky">
@@ -178,6 +201,9 @@ function App() {
         <div>② 場所</div>
       </div>
     </div>
+    
+    </>
+    
   );
 }
 
