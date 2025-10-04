@@ -4,7 +4,9 @@ import { weatherAssets } from './utils/imageLoader';
 import infoUrban from './data'
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const user = { lat: 31.56028, lon: 130.55806 };
-const url_users_db = "http://localhost:3001/tasks";
+const url_users_db = "http://localhost:3001/user";
+const url_creatures_db = "http://localhost:3001/creature";
+
 
 
 /**
@@ -69,7 +71,7 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
 };
 
 function App() {
-  const [weatherType,setWeatherType] = useState('sunny');
+  const [weatherType, setWeatherType] = useState('sunny');
   // let weather = "Sunny";
   // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
@@ -77,7 +79,7 @@ function App() {
   const [weatherData, setWeatherData] = useState(null);
 
 
-  const [userInfo,setUserInfo] = useState(null);
+  const [userInfo, setUserInfo] = useState(null);
   const user = { lat: 31.56028, lon: 130.55806 };
 
 
@@ -106,17 +108,17 @@ function App() {
   useEffect(() => {
     if (!weatherData) return;
     const weatherType = weatherData.weather[0].main;
-    let weather ="";
+    let weather = "";
 
     if (weatherType === "Clear") {
       weather = "sunny";
-      
+
     }
     else if (weatherType === "Clouds") {
       weather = "cloudy";
     }
     else {
-     weather = "rainy";
+      weather = "rainy";
     }
 
     setWeatherType(weather);
@@ -140,70 +142,180 @@ function App() {
     const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
     setSkyCharacters(skyChars);
 
-    
+
   }, [weatherData]);
 
   const backgroundStyle = {
     backgroundImage: `url(${weatherAssets[weatherType]?.background})`,
   };
 
+  // 取得
+function fetchDb({ url, setState }) {
+  fetch(url)
+    .then((res) => res.json())
+    .then((json) => setState(json))
+    .catch((err) => console.error("GET Error:", err));
+}
+
+// 追加（POST）
+function addDb({ url, data, onSuccess }) {
+  fetch(url, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+    .then((res) => res.json())
+    .then((json) => {
+      if (onSuccess) onSuccess(json);
+    })
+    .catch((err) => console.error("POST Error:", err));
+}
+
+// 更新（PUT）
+function updateDb({ url, id, data, onSuccess }) {
+  fetch(`${url}/${id}`, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  })
+    .then((res) => res.json())
+    .then((json) => {
+      if (onSuccess) onSuccess(json);
+    })
+    .catch((err) => console.error("PUT Error:", err));
+}
+
+// 削除（DELETE）
+function deleteDb({ url, id, onSuccess }) {
+  fetch(`${url}/${id}`, {
+    method: "DELETE",
+  })
+    .then(() => {
+      if (onSuccess) onSuccess();
+    })
+    .catch((err) => console.error("DELETE Error:", err));
+}
+
   
-  function fetchUsers({url,setState}) {
-    fetch(url).then(res => res.json()).then(json => (setState(json))).catch(err =>(console.error(err)));
+function CrudTestButtons({ setUserInfo }) {
+  // ① GET
+  function handleGet() {
+    fetchDb({ url: url_users_db, setState: setUserInfo });
   }
 
-  function Button({userInfo,setUserInfo}){
-    function onClick(){
-      fetchUsers(url_users_db,setUserInfo);
-      console.log(userInfo);  
-    }
-
-    return (
-      <>
-      <button onClick={onClick}>push</button>
-      </>
-    )
-
+  // ② POST（新規追加）
+  function handleAdd() {
+    const newUser = {
+      userid: Date.now(),
+      username: "new_user_" + Math.floor(Math.random() * 100),
+      friend: [],
+      weather: "Clear",
+      geted: [],
+    };
+    addDb({
+      url: url_users_db,
+      data: newUser,
+      onSuccess: () => {
+        console.log("追加成功");
+        fetchDb({ url: url_users_db, setState: setUserInfo });
+      },
+    });
   }
+
+  // ③ PUT（更新）
+  function handleUpdate() {
+    const targetId = prompt("更新したいユーザーのidを入力");
+    const newName = prompt("新しいusernameを入力");
+    if (!targetId || !newName) return;
+
+    updateDb({
+      url: url_users_db,
+      id: targetId,
+      data: { username: newName },
+    
+      onSuccess: () => {
+        console.log("更新成功");
+        fetchDb({ url: url_users_db, setState: setUserInfo });
+      },
+    });
+  }
+
+  // ④ DELETE（削除）
+  function handleDelete() {
+    const targetId = prompt("削除したいユーザーのidを入力");
+    if (!targetId) return;
+
+    deleteDb({
+      url: url_users_db,
+      id: targetId,
+      onSuccess: () => {
+        console.log("削除成功");
+        fetchDb({ url: url_users_db, setState: setUserInfo });
+      },
+    });
+  }
+
+  return (
+    <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+      <button onClick={handleGet}>GET（取得）</button>
+      <button onClick={handleAdd}>POST（追加）</button>
+      <button onClick={handleUpdate}>PUT（更新）</button>
+      <button onClick={handleDelete}>DELETE（削除）</button>
+    </div>
+  );
+}
+
+
+ 
+
+
   return (
     <>
-    <Button />
-    <div className="app-container" style={backgroundStyle}>
-      {/* 空中エリア */}
-      <div className="sky">
-        {skyCharacters.map((char, index) => (
-          <img
-            key={`sky-${index}`}
-            src={char.src}
-            alt={`character-${index}`}
-            className="character"
-            style={char.style}
-          />
-        ))}
+      <CrudTestButtons setUserInfo={setUserInfo} />
+      <pre>{JSON.stringify(userInfo, null, 2)}</pre>
+
+      <div className="app-container" style={backgroundStyle}>
+        {/* 空中エリア */}
+        <div className="sky">
+          {skyCharacters.map((char, index) => (
+            <img
+              key={`sky-${index}`}
+              src={char.src}
+              alt={`character-${index}`}
+              className="character"
+              style={char.style}
+            />
+          ))}
+        </div>
+
+        {/* 地面エリア */}
+        <div className="garden">
+          {groundCharacters.map((char, index) => (
+            <img
+              key={`ground-${index}`}
+              src={char.src}
+              alt={`character-${index}`}
+              className="character"
+              style={char.style}
+            />
+          ))}
+        </div>
+
+        {/* 天気情報エリア */}
+        <div className="weather-info">
+          <div>① 天気のアイコン</div>
+          <div>② 場所</div>
+        </div>
       </div>
 
-      {/* 地面エリア */}
-      <div className="garden">
-        {groundCharacters.map((char, index) => (
-          <img
-            key={`ground-${index}`}
-            src={char.src}
-            alt={`character-${index}`}
-            className="character"
-            style={char.style}
-          />
-        ))}
-      </div>
-
-      {/* 天気情報エリア */}
-      <div className="weather-info">
-        <div>① 天気のアイコン</div>
-        <div>② 場所</div>
-      </div>
-    </div>
-    
     </>
-    
+
   );
 }
 
