@@ -30,7 +30,7 @@ const placeCharactersWithoutOverlap = (characters, count) => {
       isOverlapping = false;
       const top = Math.random() * (100 - characterHeight);
       const left = Math.random() * (100 - characterWidth);
-      
+
       position = {
         top,
         left,
@@ -72,21 +72,22 @@ function App() {
   // stateを地面用と空中用に分ける
   const [groundCharacters, setGroundCharacters] = useState([]);
   const [skyCharacters, setSkyCharacters] = useState([]);
-  const user =[
-  {lat: 31.56028, lon: 130.55806}
-]
+  const user = [
+    { lat: 31.56028, lon: 130.55806 }
+  ]
 
   useEffect(() => {
     const assets = weatherAssets[weather];
-    
-    
+
+
     navigator.geolocation.getCurrentPosition((position) => {
       user.lat = position.coords.latitude;
       user.lon = position.coords.longitude;
-      console.log(user.lon,user.lat);
-    
-  },()=>{
-      console.log("位置情報を取得できませんでした。");}
+      console.log(user.lon, user.lat);
+
+    }, () => {
+      console.log("位置情報を取得できませんでした。");
+    });
       
     if (!assets) return;
 
