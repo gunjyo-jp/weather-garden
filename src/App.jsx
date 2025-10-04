@@ -65,6 +65,8 @@ function App() {
   const [capturedCharacter, setCapturedCharacter] = useState(null);
   const [respawnQueue, setRespawnQueue] = useState([]);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [userInfo, setUserInfo] = useState([]);
+
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -328,6 +330,10 @@ function CrudTestButtons({ setUserInfo }) {
 
 
   return (
+    <>
+     <CrudTestButtons setUserInfo={setUserInfo} />
+      <pre>{JSON.stringify(userInfo, null, 2)}</pre>
+
     <div className="app-container" style={backgroundStyle}>
       <div className="sky">
         {skyCharacters.map((char) => (
@@ -411,6 +417,9 @@ function CrudTestButtons({ setUserInfo }) {
         </div>
       )}
     </div>
+    
+    </>
+    
   );
 }
 export default App;
