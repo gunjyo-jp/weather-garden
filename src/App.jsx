@@ -3,8 +3,8 @@ import './App.css';
 import { weatherAssets } from './utils/imageLoader';
 
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
-const url_users_db = "http://localhost:3001/user";
-const url_creatures_db = "http://localhost:3001/creature";
+const url_users_db = "http://localhost:10000/user";
+const url_creatures_db = "http://localhost:10000/creature";
 
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
