@@ -152,7 +152,7 @@ function App() {
     if (!userInfo.geted?.includes(creatureId)) {
       const updatedGeted = [...(userInfo.geted || []), creatureId];
       fetch(`${url_users_db}/${userInfo.id || 1}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
@@ -301,9 +301,9 @@ function App() {
         {capturedCharacter && (
           <div className="modal-overlay" onClick={closeModal}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <h2>キャラクターをゲット！</h2>
+              <h2>{capturedCharacter.creaturename}をゲット！</h2>
               <img src={capturedCharacter.img} alt={capturedCharacter.creaturename} className="captured-character-image" />
-              <p>{capturedCharacter.creaturename}</p>
+              <p>{capturedCharacter.description}</p>
               <button onClick={closeModal}>閉じる</button>
             </div>
           </div>
