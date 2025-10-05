@@ -125,7 +125,11 @@ function App() {
     setWeatherType(newWeather);
 
     // 天気でcreatureをフィルタ
-    const groundPool = creatures.filter(c => c.img.includes(newWeather));
+    const groundPool = creatures.filter(c => {
+      if (newWeather === 'sunny') return c.img.includes('sunny');
+      if (newWeather === 'cloudy' || newWeather === 'rainy') return c.img.includes('cloudy_rainy');
+      return false;
+    });
     setGroundCharacters(placeCharactersWithoutOverlap(groundPool, 2, { placementType: 'ground', horizontalRange: [15, 85] }));
     setSkyCharacters([]); // 今はskyキャラ未対応
     setRespawnQueue([]);
@@ -139,7 +143,7 @@ function App() {
         .then(json => setUserInfo(json))
         .catch(err => console.error("User GET error:", err));
     }
-    console.log(userInfo,"test");
+    console.log(userInfo, "test");
   }, [activeMenu]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -156,7 +160,7 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...userInfo, geted: updatedGeted }),
+        body: JSON.stringify({geted: updatedGeted }),
       })
         .then(res => res.json())
         .then(updated => setUserInfo(updated))
@@ -167,7 +171,7 @@ function App() {
   // ▼ キャラ取得モーダルを閉じると再出現予約
   const closeModal = () => {
     if (!capturedCharacter) return;
-    const RESPAWN_DELAY = 3 * 60 * 1000;
+    const RESPAWN_DELAY = 0.1 * 60 * 1000;
     setGroundCharacters(prev => prev.filter(char => char.id !== capturedCharacter.id));
     setSkyCharacters(prev => prev.filter(char => char.id !== capturedCharacter.id));
     setRespawnQueue(prev => [...prev, {
