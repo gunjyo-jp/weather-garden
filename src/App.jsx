@@ -6,13 +6,19 @@ const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const url_users_db = "https://json-server-j4ce.onrender.com/user";
 const url_creatures_db = "https://json-server-j4ce.onrender.com/creature";
 
-//配置処理：生き物データをDBから受け取り、位置とstyleを追加
-const placeCharactersWithoutOverlap = (creatures, count, options = {}) => {
+// 配置処理：生き物データをDBから受け取り、位置とstyleを追加
+const placeCharactersWithoutOverlap = (creatures, count, options = {}, existingChars = []) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
   if (!creatures || creatures.length === 0) return [];
 
-  const placed = [];
   const characterWidth = 15;
+
+  // existingChars の位置情報を初期位置として設定する
+  const placed = existingChars.map(char => {
+    const left = parseFloat(char.style.left);
+    return { left, right: left + characterWidth };
+  });
+
   const maxAttempts = 50;
   const selected = [...creatures].sort(() => 0.5 - Math.random()).slice(0, count);
   const minLeft = horizontalRange[0];
@@ -35,22 +41,34 @@ const placeCharactersWithoutOverlap = (creatures, count, options = {}) => {
       }
       attempts++;
     } while (isOverlapping && attempts < maxAttempts);
-    placed.push({ ...position, creature });
+    
+    if (!isOverlapping) {
+        placed.push({ ...position, creature });
+    }
   }
 
-  return placed.map(char => {
+  // 既存キャラクターは除外し、新しく配置されたキャラクターのみを返す
+  return placed.filter(p => p.creature).map(char => {
+    // ★修正: スケールの最小値を2.5に、最大値を3.0に調整して、さらに大きく表示
+    const scaleFactor = Math.random() * 0.5 + 2.5; // スケールを 2.5 から 3.0 に調整
     const style = {
       left: `${char.left}%`,
-      transform: `scale(${Math.random() * 0.5 + 3})`,
+      transform: `scale(${scaleFactor})`,
+      transformOrigin: 'bottom center',
     };
     if (placementType === 'ground') {
-      style.bottom = `${Math.random() * 15}%`;
+      style.bottom = `${Math.random() * 15 + 5}%`;
     } else {
       style.top = `${Math.random() * 85}%`;
     }
-    return { ...char.creature, style };
+    return {
+      ...char.creature,
+      style,
+      instanceId: Date.now() + Math.random()
+    };
   });
 };
+
 
 const mapApiIconToWeatherType = (iconCode) => {
   const firstTwoChars = iconCode.slice(0, 2);
@@ -145,11 +163,8 @@ function App() {
     const creatureId = Number(character.id);
 
     try {
-      // 最新ユーザー情報を取得
       const res = await fetch(`${url_users_db}/${userInfo.id}`);
       const latestUser = await res.json();
-
-      // 重複なしで geted 更新
       const updatedGeted = Array.from(new Set([...(latestUser.geted || []), creatureId]));
 
       if (!latestUser.geted?.includes(creatureId)) {
@@ -169,10 +184,10 @@ function App() {
   // ▼ キャラ取得モーダルを閉じると再出現予約
   const closeModal = () => {
     if (!capturedCharacter) return;
-    const RESPAWN_DELAY = 0.1 * 60 * 1000; // 6秒
+    const RESPAWN_DELAY = 6 * 1000;
 
-    setGroundCharacters(prev => prev.filter(char => char.id !== capturedCharacter.id));
-    setSkyCharacters(prev => prev.filter(char => char.id !== capturedCharacter.id));
+    setGroundCharacters(prev => prev.filter(char => char.instanceId !== capturedCharacter.instanceId));
+    setSkyCharacters(prev => prev.filter(char => char.instanceId !== capturedCharacter.instanceId));
 
     setRespawnQueue(prev => [...prev, {
       id: Date.now(),
@@ -184,46 +199,57 @@ function App() {
     setCapturedCharacter(null);
   };
 
-  // ▼ リスポーンチェック
-
-
-  // ▼ リスポーンチェック（修正版）
+  // ▼ リスポーンチェック（改善版）
   useEffect(() => {
     if (respawnQueue.length === 0) return;
 
     const interval = setInterval(() => {
       const now = Date.now();
+      let processedItemIds = [];
+
       setRespawnQueue(prevQueue => {
         const readyToRespawn = prevQueue.filter(item => item.respawnTime <= now);
-        const stillWaiting = prevQueue.filter(item => item.respawnTime > now);
-        const scale = Math.random() * 0.5 + 3; // 0.8〜1.3
-        const flip = Math.random() < 0.5 ? -1 : 1; // 50%の確率で反
-
-        if (readyToRespawn.length > 0) {
-          setGroundCharacters(prevChars => {
-            const respawned = readyToRespawn
-              .filter(item => !prevChars.some(c => c.id === item.creatureId)) // ← ここで重複防止
-              .map(item => {
-                const original = creatures.find(c => c.id === item.creatureId);
-                if (!original) return null;
-                const style = {
-                  left: `${Math.random() * 70 + 15}%`,
-                  bottom: `${Math.random() * 15}%`,
-                  transform: `scale(${scale*flip},${scale})`
-                };
-                return { ...original, style };
-              })
-              .filter(Boolean);
-            return [...prevChars, ...respawned];
-          });
+        if (readyToRespawn.length === 0) {
+          return prevQueue;
         }
 
-        return stillWaiting;
+        setGroundCharacters(prevChars => {
+          const currentCount = prevChars.length;
+          const respawnNeeded = 2 - currentCount;
+          
+          if (respawnNeeded <= 0) {
+            return prevChars;
+          }
+          
+          const countToRespawn = Math.min(readyToRespawn.length, respawnNeeded);
+          const itemsToProcess = readyToRespawn.slice(0, countToRespawn);
+          processedItemIds = itemsToProcess.map(item => item.id);
+
+          if (countToRespawn > 0) {
+            const respawnPool = creatures.filter(c => {
+              if (weatherType === 'sunny') return c.img.includes('sunny');
+              if (weatherType === 'cloudy' || weatherType === 'rainy') return c.img.includes('cloudy_rainy');
+              return false;
+            });
+            
+            const respawned = placeCharactersWithoutOverlap(
+                respawnPool, 
+                countToRespawn, 
+                { placementType: 'ground', horizontalRange: [15, 85] },
+                prevChars
+            );
+
+            return [...prevChars, ...respawned];
+          }
+          return prevChars;
+        });
+
+        return prevQueue.filter(item => !processedItemIds.includes(item.id));
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [respawnQueue, creatures]);
+  }, [respawnQueue, creatures, weatherType]);
 
 
   const openMenuModal = (menuName) => {
@@ -237,19 +263,15 @@ function App() {
 
   const changeWeatherDemo = (newWeather) => {
     setWeatherType(newWeather);
-
-    // 天気に合わせて groundCharacters を更新
     const groundPool = creatures.filter(c => {
       if (newWeather === 'sunny') return c.img.includes('sunny');
       if (newWeather === 'cloudy' || newWeather === 'rainy') return c.img.includes('cloudy_rainy');
       return false;
     });
-
     setGroundCharacters(placeCharactersWithoutOverlap(groundPool, 2, { placementType: 'ground', horizontalRange: [15, 85] }));
-    setSkyCharacters([]); // 今はskyキャラ未対応
+    setSkyCharacters([]);
     setRespawnQueue([]);
   };
-
 
   const renderModalContent = () => {
     switch (activeMenu) {
@@ -290,7 +312,6 @@ function App() {
               </div>
             ) : <p>まだ仲間がいません！</p>}
           </div>
-
         );
       case 'フレンド':
         return <div><h3>フレンド</h3><p>今後ここに実装予定</p></div>;
@@ -314,13 +335,13 @@ function App() {
       <div className="app-container" style={backgroundStyle}>
         <div className="sky">
           {skyCharacters.map(char => (
-            <img key={`sky-${char.id}`} src={char.img} alt={char.creaturename} className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+            <img key={char.instanceId} src={char.img} alt={char.creaturename} className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
           ))}
         </div>
 
         <div className="garden">
           {groundCharacters.map(char => (
-            <img key={`ground-${char.id}`} src={char.img} alt={char.creaturename} className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+            <img key={char.instanceId} src={char.img} alt={char.creaturename} className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
           ))}
         </div>
 
@@ -381,10 +402,7 @@ function App() {
           </div>
         )}
       </div>
-
-
     </>
-
   );
 }
 
