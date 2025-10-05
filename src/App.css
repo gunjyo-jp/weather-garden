@@ -31,6 +31,7 @@
   position: absolute;
   width: 150px;
   height: auto;
+  transform-origin: center;
 }
 
 /* 天気情報のエリア */
@@ -300,3 +301,14 @@
 }
 
 
+.creature-list-scroll {
+  max-height: 400px;  /* モーダル内で見やすい高さに調整 */
+  overflow-y: auto;
+  padding-right: 8px; /* スクロールバーがかぶらないように */
+}
+
+.creature-card {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
