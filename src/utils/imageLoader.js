@@ -1,20 +1,19 @@
-// 晴れの日のキャラクター画像をまとめてインポート
-import bug_mitsubachi from '../assets/character/sunny/bug_mitsubachi.png';
-import butterfly from '../assets/character/sunny/butterfly.png';
-import hibiscus from '../assets/character/sunny/hibiscus.png';
-import himawari from '../assets/character/sunny/himawari.png';
-import marigold from '../assets/character/sunny/marigold.png';
-import tentomushi from '../assets/character/sunny/tentomushi.png';
-import tonbo from '../assets/character/sunny/tonbo.png';
+// 晴れの日のキャラクター画像のパスを定義
+const miyamakirishima = '/character/sunny/miyamakirishima.png';
+const rurikakesu = '/character/sunny/rurikakesu.png';
+const satumanishiki = '/character/sunny/satumanishiki.png';
+const sotetsu = '/character/sunny/sotetsu.png';
 
-// 雨/曇りの日のキャラクター画像をまとめてインポート
-import ajisai from '../assets/character/cloudy_rainy/ajisai.png';
-import flog from '../assets/character/cloudy_rainy/flog.png';
-import kanahebi from '../assets/character/cloudy_rainy/kanahebi.png';
-import katatsumuri from '../assets/character/cloudy_rainy/katatsumuri.png';
-import mimizu from '../assets/character/cloudy_rainy/mimizu.png';
+// 雨/曇りの日のキャラクター画像のパスを定義
+const amamiishikawagaeru = '/character/cloudy_rainy/amamiishikawagaeru.png';
+const amaminokurousagi = '/character/cloudy_rainy/amaminokurousagi.png';
+const hikagehego = '/character/cloudy_rainy/hikagehego.png';
+const oosumisansyouuo = '/character/cloudy_rainy/oosumisansyouuo.png';
+const ootoratugumi = '/character/cloudy_rainy/ootoratugumi.png';
 
 // 背景画像をまとめてインポート
+// ※もし背景画像やアイコンも public ディレクトリにある場合は、上記と同様にパス文字列に変更してください。
+// ※src/assets 内にある場合は、このまま import 文を使用します。
 import background_sunny from '../assets/background/background_sunny.png';
 import background_cloudy from '../assets/background/background_cloudy.png';
 import background_rainy from '../assets/background/background_rainy.png';
@@ -31,15 +30,15 @@ export const weatherAssets = {
     background: background_sunny,
     icon: icon_sunny,
     characters: {
-      ground: [hibiscus, himawari, marigold, tentomushi],
-      sky: [bug_mitsubachi, butterfly, tonbo],
+      ground: [miyamakirishima, sotetsu,rurikakesu, satumanishiki],
+      sky: [],
     },
   },
   cloudy: {
     background: background_cloudy,
     icon: icon_cloudy,
     characters: {
-      ground: [ajisai, flog, kanahebi, katatsumuri, mimizu],
+      ground: [amamiishikawagaeru, amaminokurousagi, hikagehego, oosumisansyouuo, ootoratugumi],
       sky: [],
     },
   },
@@ -47,8 +46,8 @@ export const weatherAssets = {
     background: background_rainy,
     icon: icon_rainy,
     characters: {
-      ground: [ajisai, flog, kanahebi, katatsumuri, mimizu],
-      sky: []
+      ground: [amamiishikawagaeru, amaminokurousagi, hikagehego, oosumisansyouuo, ootoratugumi],
+      sky: [],
     },
   },
   snowy: {
