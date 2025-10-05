@@ -5,21 +5,21 @@ import { weatherAssets } from './utils/imageLoader';
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const url_users_db = "https://json-server-j4ce.onrender.com/user";
 const url_creatures_db = "https://json-server-j4ce.onrender.com/creature";
-const local_url_users_db = "http://localhost:3001/user";
-const local_url_creatures_db = "http://localhost:3001/creature";
 
-
-const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
+// 配置処理：生き物データをDBから受け取り、位置とstyleを追加
+const placeCharactersWithoutOverlap = (creatures, count, options = {}) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
-  if (!characters || characters.length === 0) return [];
+  if (!creatures || creatures.length === 0) return [];
+
   const placed = [];
   const characterWidth = 15;
   const maxAttempts = 50;
-  const selected = [...characters].sort(() => 0.5 - Math.random()).slice(0, count);
+  const selected = [...creatures].sort(() => 0.5 - Math.random()).slice(0, count);
   const minLeft = horizontalRange[0];
   const maxLeft = horizontalRange[1];
   const availableWidth = maxLeft - minLeft - characterWidth;
-  for (const charSrc of selected) {
+
+  for (const creature of selected) {
     let attempts = 0;
     let isOverlapping;
     let position;
@@ -35,8 +35,9 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
       }
       attempts++;
     } while (isOverlapping && attempts < maxAttempts);
-    placed.push({ ...position, src: charSrc });
+    placed.push({ ...position, creature });
   }
+
   return placed.map(char => {
     const style = {
       left: `${char.left}%`,
@@ -47,7 +48,7 @@ const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
     } else {
       style.top = `${Math.random() * 85}%`;
     }
-    return { src: char.src, style };
+    return { ...char.creature, style };
   });
 };
 
@@ -70,22 +71,23 @@ function App() {
   const [capturedCharacter, setCapturedCharacter] = useState(null);
   const [respawnQueue, setRespawnQueue] = useState([]);
   const [activeMenu, setActiveMenu] = useState(null);
-  const [userInfo, setUserInfo] = useState([]);
+  const [userInfo, setUserInfo] = useState({});
   const [creatures, setCreatures] = useState([]);
 
-
+  // ▼ 位置情報の取得
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({ lat: position.coords.latitude, lon: position.coords.longitude });
       },
       () => {
-        console.log("位置情報を取得できませんでした。");
-        setLocation({ lat: 31.56028, lon: 130.55806 }); // 失敗時は鹿児島
+        console.log("位置情報を取得できませんでした。デフォルト(鹿児島)を使用します。");
+        setLocation({ lat: 31.56028, lon: 130.55806 });
       }
     );
   }, []);
 
+  // ▼ 天気API取得
   useEffect(() => {
     if (!location) return;
     const fetchAllWeatherData = async () => {
@@ -94,372 +96,167 @@ function App() {
           fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&appid=${apiKey}&units=metric&lang=ja`),
           fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${location.lat}&lon=${location.lon}&appid=${apiKey}&units=metric&lang=ja`)
         ]);
-        if (!weatherResponse.ok || !forecastResponse.ok) throw new Error('APIからの応答がありません');
-        const weatherJson = await weatherResponse.json();
-        const forecastJson = await forecastResponse.json();
-        setWeatherData(weatherJson);
-        setForecastData(forecastJson);
+        if (!weatherResponse.ok || !forecastResponse.ok) throw new Error('APIエラー');
+        setWeatherData(await weatherResponse.json());
+        setForecastData(await forecastResponse.json());
       } catch (error) {
-        console.error("天気情報の取得に失敗:", error);
+        console.error("天気情報取得失敗:", error);
       }
     };
     fetchAllWeatherData();
   }, [location]);
 
+  // ▼ Creature DBを初回ロード
   useEffect(() => {
-    if (!weatherData) return;
+    fetch(url_creatures_db)
+      .then(res => res.json())
+      .then(json => setCreatures(json))
+      .catch(err => console.error("Creature DB error:", err));
+  }, []);
+
+  // ▼ 天気が変わったら天気タイプを反映＋生き物を再配置
+  useEffect(() => {
+    if (!weatherData || creatures.length === 0) return;
+
     const weatherMain = weatherData.weather[0].main;
     let newWeather = "rainy";
     if (weatherMain === "Clear") newWeather = "sunny";
     else if (weatherMain === "Clouds") newWeather = "cloudy";
     setWeatherType(newWeather);
 
-    const assets = weatherAssets[newWeather];
-    if (!assets) return;
-    const groundOptions = { placementType: 'ground', horizontalRange: [15, 85] };
-    const groundChars = placeCharactersWithoutOverlap(assets.characters.ground, 2, groundOptions);
-    setGroundCharacters(groundChars);
-    const skyOptions = { placementType: 'sky', horizontalRange: [15, 85] };
-    const skyChars = placeCharactersWithoutOverlap(assets.characters.sky, 1, skyOptions);
-    setSkyCharacters(skyChars);
+    // 天気でcreatureをフィルタ
+    const groundPool = creatures.filter(c => {
+      if (newWeather === 'sunny') return c.img.includes('sunny');
+      if (newWeather === 'cloudy' || newWeather === 'rainy') return c.img.includes('cloudy_rainy');
+      return false;
+    });
+    setGroundCharacters(placeCharactersWithoutOverlap(groundPool, 2, { placementType: 'ground', horizontalRange: [15, 85] }));
+    setSkyCharacters([]); // 今はskyキャラ未対応
     setRespawnQueue([]);
-  }, [weatherData]);
+  }, [weatherData, creatures]);
 
+  // ▼ メニューを開いた時にユーザー情報・クリーチャーを読み込む
   useEffect(() => {
-    const respawnInterval = setInterval(() => {
-      const now = Date.now();
-      const MAX_CHARS = 3;
-      const totalCharacters = groundCharacters.length + skyCharacters.length;
-      if (totalCharacters < MAX_CHARS && respawnQueue.length > 0) {
-        const respawnEvent = respawnQueue.find(item => item.respawnTime <= now);
-        if (respawnEvent) {
-          const assets = weatherAssets[weatherType];
-          if (!assets) return;
-          const type = respawnEvent.type;
-          const onScreenSrcs = [...groundCharacters, ...skyCharacters].map(char => char.src);
-          const potentialRespawns = (type === 'ground') ? assets.characters.ground : assets.characters.sky;
-          const availableCharacters = potentialRespawns.filter(src => !onScreenSrcs.includes(src));
-          if (availableCharacters.length === 0) {
-            setRespawnQueue(prev => prev.filter(item => item.id !== respawnEvent.id));
-            return;
-          }
-          const randomCharSrc = availableCharacters[Math.floor(Math.random() * availableCharacters.length)];
-          const allCurrentCharacters = [...groundCharacters, ...skyCharacters];
-          let newCharacter;
-          let isOverlapping;
-          let attempts = 0;
-          const maxAttempts = 50;
-          do {
-            isOverlapping = false;
-            const tempCharacterArray = placeCharactersWithoutOverlap([randomCharSrc], 1, {
-              placementType: type,
-              horizontalRange: [15, 85],
-            });
-            newCharacter = tempCharacterArray[0];
-            for (const existingChar of allCurrentCharacters) {
-              const newLeft = parseFloat(newCharacter.style.left);
-              const existingLeft = parseFloat(existingChar.style.left);
-              if (Math.abs(newLeft - existingLeft) < 15) {
-                isOverlapping = true;
-                break;
-              }
-            }
-            attempts++;
-          } while (isOverlapping && attempts < maxAttempts);
-          if (!isOverlapping) {
-            if (type === 'ground') {
-              setGroundCharacters(prev => [...prev, newCharacter]);
-            } else {
-              setSkyCharacters(prev => [...prev, newCharacter]);
-            }
-            setRespawnQueue(prev => prev.filter(item => item.id !== respawnEvent.id));
-          }
-        }
-      }
-    }, 1000);
-    return () => clearInterval(respawnInterval);
-  }, [respawnQueue, groundCharacters, skyCharacters, weatherType]);
-
-  useEffect(() => {
-    // activeMenu が切り替わるたびに処理
-    switch (activeMenu) {
-      case '図鑑':
-        // ユーザー情報の取得
-        fetchDb({ url: `${url_users_db}/1`, setState: setUserInfo });
-
-        // クリーチャー一覧の取得
-        fetchDb({ url: url_creatures_db, setState: setCreatures });
-        break;
-
-      case '天気':
-        // 天気用の処理（必要があれば）
-        break;
-
-      case 'フレンド':
-        // フレンド用の処理
-        break;
-
-      default:
-        break;
+    if (activeMenu === '図鑑') {
+      fetch(`${url_users_db}/1`)
+        .then(res => res.json())
+        .then(json => setUserInfo(json))
+        .catch(err => console.error("User GET error:", err));
     }
+    console.log(userInfo, "test");
   }, [activeMenu]);
 
-
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const handleCharacterClick = (character) => setCapturedCharacter(character);
 
+  // ▼ クリック処理（ファイル名→IDではなく、DBのcreature.idを使用）
+  const handleCharacterClick = (character) => {
+    setCapturedCharacter(character);
+    const creatureId = Number(character.id);
+
+    if (!userInfo.geted?.includes(creatureId)) {
+      const updatedGeted = [...(userInfo.geted || []), creatureId];
+      fetch(`${url_users_db}/${userInfo.id || 1}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({geted: updatedGeted }),
+      })
+        .then(res => res.json())
+        .then(updated => setUserInfo(updated))
+        .catch(err => console.error("User update error:", err));
+    }
+  };
+
+  // ▼ キャラ取得モーダルを閉じると再出現予約
   const closeModal = () => {
     if (!capturedCharacter) return;
-    const RESPAWN_DELAY = 3 * 60 * 1000;
-    const isGround = weatherAssets[weatherType].characters.ground.some(src => src === capturedCharacter.src);
-    const type = isGround ? 'ground' : 'sky';
-    setRespawnQueue(prevQueue => [...prevQueue, { id: Date.now(), respawnTime: Date.now() + RESPAWN_DELAY, type: type }]);
-    setGroundCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
-    setSkyCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
+    const RESPAWN_DELAY = 0.1 * 60 * 1000;
+    setGroundCharacters(prev => prev.filter(char => char.id !== capturedCharacter.id));
+    setSkyCharacters(prev => prev.filter(char => char.id !== capturedCharacter.id));
+    setRespawnQueue(prev => [...prev, {
+      id: Date.now(),
+      respawnTime: Date.now() + RESPAWN_DELAY,
+      type: 'ground'
+    }]);
     setCapturedCharacter(null);
   };
-  
+
   const openMenuModal = (menuName) => {
     setActiveMenu(menuName);
     setIsMenuOpen(false);
   };
   const closeMenuModal = () => setActiveMenu(null);
-  const menuContent = {
-    '天気': 'ここに天気の詳細情報（週間予報など）が表示されます。',
-    '図鑑': 'ここにゲットしたキャラクターの一覧が表示されます。',
-    'フレンド': 'ここにフレンドリストが表示されます。',
-    '設定': 'ここに各種設定項目が表示されます。',
-    'ヘルプ': 'ここにゲームの遊び方やお問い合わせ情報が表示されます。',
-  };
+
+  // ▼ 天気背景＆アイコン
   const backgroundStyle = { backgroundImage: `url(${weatherAssets[weatherType]?.background})` };
   const currentWeatherIcon = weatherAssets[weatherType]?.icon;
 
-  function fetchDb({ url, setState }) {
-    fetch(url)
-      .then((res) => res.json())
-      .then((json) => setState(json))
-      .catch((err) => console.error("GET Error:", err));
-  }
-
-  // 追加（POST）
-  function addDb({ url, data, onSuccess }) {
-    fetch(url, {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    })
-      .then((res) => res.json())
-      .then((json) => {
-        if (onSuccess) onSuccess(json);
-      })
-      .catch((err) => console.error("POST Error:", err));
-  }
-
-  // 更新（PUT）
-  function updateDb({ url, id, data, onSuccess }) {
-    console.log(`${url}/${id}`);
-    fetch(`${url}/${id}`, {
-      method: "PUT",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    })
-      .then((res) => res.json())
-      .then((json) => {
-        if (onSuccess) onSuccess(json);
-      })
-      .catch((err) => console.error("PUT Error:", err));
-  }
-
-  // 削除（DELETE）
-  function deleteDb({ url, id, onSuccess }) {
-    fetch(`${url}/${id}`, {
-      method: "DELETE",
-    })
-      .then(() => {
-        if (onSuccess) onSuccess();
-      })
-      .catch((err) => console.error("DELETE Error:", err));
-  }
-
-  function CrudTestButtons({ setUserInfo }) {
-    // ① GET
-    function handleGet() {
-      fetchDb({ url: url_users_db, setState: setUserInfo });
-    }
-
-    // ② POST（新規追加）
-    function handleAdd() {
-      const newUser = {
-        userid: Date.now(),
-        username: "new_user_" + Math.floor(Math.random() * 100),
-        friend: [],
-        weather: "Clear",
-        geted: [],
-      };
-      addDb({
-        url: url_users_db,
-        data: newUser,
-        onSuccess: () => {
-          console.log("追加成功");
-          fetchDb({ url: url_users_db, setState: setUserInfo });
-        },
-      });
-    }
-
-    // ③ PUT（更新）
-    function handleUpdate() {
-      const targetId = prompt("更新したいユーザーのidを入力");
-      const newName = prompt("新しいusernameを入力");
-
-
-      if (!targetId || !newName) return;
-
-      updateDb({
-        url: url_users_db,
-        id: Number(targetId),
-        data: { username: newName },
-
-        onSuccess: () => {
-          console.log("更新成功");
-          fetchDb({ url: url_users_db, setState: setUserInfo });
-        },
-      });
-    }
-
-    // ④ DELETE（削除）
-    function handleDelete() {
-      const targetId = prompt("削除したいユーザーのidを入力");
-      if (!targetId) return;
-
-      deleteDb({
-        url: url_users_db,
-        id: targetId,
-        onSuccess: () => {
-          console.log("削除成功");
-          fetchDb({ url: url_users_db, setState: setUserInfo });
-        },
-      });
-    }
-
-    return (
-      <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
-        <button onClick={handleGet}>GET（取得）</button>
-        <button onClick={handleAdd}>POST（追加）</button>
-        <button onClick={handleUpdate}>PUT（更新）</button>
-        <button onClick={handleDelete}>DELETE（削除）</button>
-      </div>
-    );
-  }
-
-  // メインコンポーネントの中で
+  // ▼ 図鑑などのメニュー描画
   const renderModalContent = () => {
     switch (activeMenu) {
       case '天気':
         return (
           <div className="weather-forecast-details">
-            {forecastData ? forecastData.list.slice(0, 5).map((forecast, index) => {
-              const time = new Date(forecast.dt * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-              const temp = Math.round(forecast.main.temp);
-              const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
-              const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
+            {forecastData ? forecastData.list.slice(0, 5).map((f, i) => {
+              const time = new Date(f.dt * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+              const temp = Math.round(f.main.temp);
+              const type = mapApiIconToWeatherType(f.weather[0].icon);
               return (
-                <div key={index} className="forecast-detail-item">
+                <div key={i} className="forecast-detail-item">
                   <span className="forecast-detail-time">{time}</span>
-                  {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
+                  {weatherAssets[type]?.icon && <img src={weatherAssets[type].icon} alt="icon" />}
                   <span className="forecast-detail-temp">{temp}°C</span>
                 </div>
               );
-            }) : <p>予報データを読み込み中です...</p>}
+            }) : <p>予報データを読み込み中...</p>}
           </div>
         );
-
       case '図鑑':
-        if (!userInfo || !creatures) return <p>データを読み込み中です...</p>;
-
-        const ownedCreatures = creatures.filter(c =>
-          userInfo.geted?.includes(Number(c.id)) // Number に変換してマッチ
-        );
-
+        if (!userInfo || !creatures) return <p>読み込み中...</p>;
+        const ownedCreatures = creatures.filter(c => userInfo.geted?.includes(Number(c.id)));
+        console.log(userInfo);
         return (
           <div className="zukan-container">
             <h3>{userInfo.username}の図鑑</h3>
             {ownedCreatures.length > 0 ? (
               <div className="creature-list">
-                {ownedCreatures.map(creature => (
-                  <div key={creature.id} className="creature-card">
-                    <img src={creature.img} alt={creature.creaturename} className="creature-img" />
+                {ownedCreatures.map(c => (
+                  <div key={c.id} className="creature-card">
+                    <img src={c.img} alt={c.creaturename} className="creature-img" />
                     <div className="creature-info">
-                      <h4>{creature.creaturename}</h4>
-                      <p>{creature.description || "不明"}</p>
+                      <h4>{c.creaturename}</h4>
+                      <p>{c.description || "不明"}</p>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p>まだ仲間がいません！</p>
-            )}
+            ) : <p>まだ仲間がいません！</p>}
           </div>
         );
-
-
-
       case 'フレンド':
-        return (
-          <div className="friend-container">
-            <h3>フレンド</h3>
-            <p>フレンドリストや追加機能などをここに実装</p>
-          </div>
-        );
-
+        return <div><h3>フレンド</h3><p>今後ここに実装予定</p></div>;
       case '設定':
-        return (
-          <div className="settings-container">
-            <h3>設定</h3>
-            <p>音量・通知・テーマ切り替えなどをここに実装</p>
-          </div>
-        );
-
+        return <div><h3>設定</h3><p>音量・通知・テーマなど</p></div>;
       case 'ヘルプ':
-        return (
-          <div className="help-container">
-            <h3>ヘルプ</h3>
-            <p>使い方・FAQ・問い合わせ先などをここに表示</p>
-          </div>
-        );
-
+        return <div><h3>ヘルプ</h3><p>使い方や問い合わせ先</p></div>;
       default:
         return null;
     }
   };
 
-
-
-
-
-
-
   return (
     <>
-      <CrudTestButtons setUserInfo={setUserInfo} />
-      <pre>{JSON.stringify(userInfo, null, 2)}</pre>
-
       <div className="app-container" style={backgroundStyle}>
-
         <div className="sky">
-          {skyCharacters.map((char) => (
-            <img key={`sky-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+          {skyCharacters.map(char => (
+            <img key={`sky-${char.id}`} src={char.img} alt={char.creaturename} className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
           ))}
         </div>
 
         <div className="garden">
-          {groundCharacters.map((char) => (
-            <img key={`ground-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+          {groundCharacters.map(char => (
+            <img key={`ground-${char.id}`} src={char.img} alt={char.creaturename} className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
           ))}
         </div>
 
@@ -468,7 +265,6 @@ function App() {
             {currentWeatherIcon && <img src={currentWeatherIcon} alt={`${weatherType} icon`} className="weather-icon-display" />}
             {weatherData && <div className="location">{weatherData.name}</div>}
           </div>
-
           <div className="forecast-container">
             {forecastData && forecastData.list.slice(0, 3).map((forecast, index) => {
               const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
@@ -481,13 +277,10 @@ function App() {
               );
             })}
           </div>
-        </div>
-
-        <div className="collection">
-
 
 
         </div>
+
 
 
 
@@ -511,30 +304,27 @@ function App() {
 
         {capturedCharacter && (
           <div className="modal-overlay" onClick={closeModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <h2>キャラクターをゲット！</h2>
-              <img src={capturedCharacter.src} alt="ゲットしたキャラクター" className="captured-character-image" />
-              <p>{capturedCharacter.src.split('/').pop().replace(/\.\w+$/, '')}</p>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <h2>{capturedCharacter.creaturename}をゲット！</h2>
+              <img src={capturedCharacter.img} alt={capturedCharacter.creaturename} className="captured-character-image" />
+              <p>{capturedCharacter.description}</p>
               <button onClick={closeModal}>閉じる</button>
             </div>
           </div>
         )}
 
-
         {activeMenu && (
           <div className="modal-overlay" onClick={closeMenuModal}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
               <h2>{activeMenu}</h2>
               {renderModalContent()}
               <button onClick={closeMenuModal}>閉じる</button>
             </div>
           </div>
         )}
-
       </div>
-
     </>
-
   );
 }
+
 export default App;

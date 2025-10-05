@@ -341,6 +341,3 @@
   font-size: clamp(0.875rem, 1.8vw, 1.125rem); /* pxをremに */
 }
 
-.creature-info p {
-  font-size: clamp(0.75rem, 1.5vw, 1rem); /* pxをremに */
-}
