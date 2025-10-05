@@ -5,6 +5,9 @@ import { weatherAssets } from './utils/imageLoader';
 const apiKey = import.meta.env.VITE_WEATHER_APP_KEY;
 const url_users_db = "https://json-server-j4ce.onrender.com/user";
 const url_creatures_db = "https://json-server-j4ce.onrender.com/creature";
+const local_url_users_db = "http://localhost:3001/user";
+const local_url_creatures_db = "http://localhost:3001/creature";
+
 
 const placeCharactersWithoutOverlap = (characters, count, options = {}) => {
   const { placementType = 'ground', horizontalRange = [0, 100] } = options;
@@ -68,6 +71,7 @@ function App() {
   const [respawnQueue, setRespawnQueue] = useState([]);
   const [activeMenu, setActiveMenu] = useState(null);
   const [userInfo, setUserInfo] = useState([]);
+  const [creatures, setCreatures] = useState([]);
 
 
   useEffect(() => {
@@ -120,7 +124,7 @@ function App() {
     setSkyCharacters(skyChars);
     setRespawnQueue([]);
   }, [weatherData]);
-  
+
   useEffect(() => {
     const respawnInterval = setInterval(() => {
       const now = Date.now();
@@ -155,7 +159,7 @@ function App() {
             for (const existingChar of allCurrentCharacters) {
               const newLeft = parseFloat(newCharacter.style.left);
               const existingLeft = parseFloat(existingChar.style.left);
-              if (Math.abs(newLeft - existingLeft) < 15) { 
+              if (Math.abs(newLeft - existingLeft) < 15) {
                 isOverlapping = true;
                 break;
               }
@@ -176,8 +180,34 @@ function App() {
     return () => clearInterval(respawnInterval);
   }, [respawnQueue, groundCharacters, skyCharacters, weatherType]);
 
+  useEffect(() => {
+    // activeMenu が切り替わるたびに処理
+    switch (activeMenu) {
+      case '図鑑':
+        // ユーザー情報の取得
+        fetchDb({ url: `${url_users_db}/1`, setState: setUserInfo });
+
+        // クリーチャー一覧の取得
+        fetchDb({ url: url_creatures_db, setState: setCreatures });
+        break;
+
+      case '天気':
+        // 天気用の処理（必要があれば）
+        break;
+
+      case 'フレンド':
+        // フレンド用の処理
+        break;
+
+      default:
+        break;
+    }
+  }, [activeMenu]);
+
+
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const handleCharacterClick = (character) => setCapturedCharacter(character);
+
   const closeModal = () => {
     if (!capturedCharacter) return;
     const RESPAWN_DELAY = 3 * 60 * 1000;
@@ -188,6 +218,7 @@ function App() {
     setSkyCharacters(prev => prev.filter(char => char.src !== capturedCharacter.src));
     setCapturedCharacter(null);
   };
+  
   const openMenuModal = (menuName) => {
     setActiveMenu(menuName);
     setIsMenuOpen(false);
@@ -204,224 +235,306 @@ function App() {
   const currentWeatherIcon = weatherAssets[weatherType]?.icon;
 
   function fetchDb({ url, setState }) {
-  fetch(url)
-    .then((res) => res.json())
-    .then((json) => setState(json))
-    .catch((err) => console.error("GET Error:", err));
-}
-
-// 追加（POST）
-function addDb({ url, data, onSuccess }) {
-  fetch(url, {
-    method: "POST",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  })
-    .then((res) => res.json())
-    .then((json) => {
-      if (onSuccess) onSuccess(json);
-    })
-    .catch((err) => console.error("POST Error:", err));
-}
-
-// 更新（PUT）
-function updateDb({ url, id, data, onSuccess }) {
-  console.log(`${url}/${id}`);
-  fetch(`${url}/${id}`, {
-    method: "PUT",
-    headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  })
-    .then((res) => res.json())
-    .then((json) => {
-      if (onSuccess) onSuccess(json);
-    })
-    .catch((err) => console.error("PUT Error:", err));
-}
-
-// 削除（DELETE）
-function deleteDb({ url, id, onSuccess }) {
-  fetch(`${url}/${id}`, {
-    method: "DELETE",
-  })
-    .then(() => {
-      if (onSuccess) onSuccess();
-    })
-    .catch((err) => console.error("DELETE Error:", err));
-}
-
-function CrudTestButtons({ setUserInfo }) {
-  // ① GET
-  function handleGet() {
-    fetchDb({ url: url_users_db, setState: setUserInfo });
+    fetch(url)
+      .then((res) => res.json())
+      .then((json) => setState(json))
+      .catch((err) => console.error("GET Error:", err));
   }
 
-  // ② POST（新規追加）
-  function handleAdd() {
-    const newUser = {
-      userid: Date.now(),
-      username: "new_user_" + Math.floor(Math.random() * 100),
-      friend: [],
-      weather: "Clear",
-      geted: [],
-    };
-    addDb({
-      url: url_users_db,
-      data: newUser,
-      onSuccess: () => {
-        console.log("追加成功");
-        fetchDb({ url: url_users_db, setState: setUserInfo });
+  // 追加（POST）
+  function addDb({ url, data, onSuccess }) {
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
       },
-    });
+      body: JSON.stringify(data),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (onSuccess) onSuccess(json);
+      })
+      .catch((err) => console.error("POST Error:", err));
   }
 
-  // ③ PUT（更新）
-  function handleUpdate() {
-    const targetId = prompt("更新したいユーザーのidを入力");
-    const newName = prompt("新しいusernameを入力");
-
-
-    if (!targetId || !newName) return;
-
-    updateDb({
-      url: url_users_db,
-      id: Number(targetId),
-      data: { username: newName },
-    
-      onSuccess: () => {
-        console.log("更新成功");
-        fetchDb({ url: url_users_db, setState: setUserInfo });
+  // 更新（PUT）
+  function updateDb({ url, id, data, onSuccess }) {
+    console.log(`${url}/${id}`);
+    fetch(`${url}/${id}`, {
+      method: "PUT",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
       },
-    });
+      body: JSON.stringify(data),
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (onSuccess) onSuccess(json);
+      })
+      .catch((err) => console.error("PUT Error:", err));
   }
 
-  // ④ DELETE（削除）
-  function handleDelete() {
-    const targetId = prompt("削除したいユーザーのidを入力");
-    if (!targetId) return;
-
-    deleteDb({
-      url: url_users_db,
-      id: targetId,
-      onSuccess: () => {
-        console.log("削除成功");
-        fetchDb({ url: url_users_db, setState: setUserInfo });
-      },
-    });
+  // 削除（DELETE）
+  function deleteDb({ url, id, onSuccess }) {
+    fetch(`${url}/${id}`, {
+      method: "DELETE",
+    })
+      .then(() => {
+        if (onSuccess) onSuccess();
+      })
+      .catch((err) => console.error("DELETE Error:", err));
   }
 
-  return (
-    <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
-      <button onClick={handleGet}>GET（取得）</button>
-      <button onClick={handleAdd}>POST（追加）</button>
-      <button onClick={handleUpdate}>PUT（更新）</button>
-      <button onClick={handleDelete}>DELETE（削除）</button>
-    </div>
-  );
-}
+  function CrudTestButtons({ setUserInfo }) {
+    // ① GET
+    function handleGet() {
+      fetchDb({ url: url_users_db, setState: setUserInfo });
+    }
+
+    // ② POST（新規追加）
+    function handleAdd() {
+      const newUser = {
+        userid: Date.now(),
+        username: "new_user_" + Math.floor(Math.random() * 100),
+        friend: [],
+        weather: "Clear",
+        geted: [],
+      };
+      addDb({
+        url: url_users_db,
+        data: newUser,
+        onSuccess: () => {
+          console.log("追加成功");
+          fetchDb({ url: url_users_db, setState: setUserInfo });
+        },
+      });
+    }
+
+    // ③ PUT（更新）
+    function handleUpdate() {
+      const targetId = prompt("更新したいユーザーのidを入力");
+      const newName = prompt("新しいusernameを入力");
+
+
+      if (!targetId || !newName) return;
+
+      updateDb({
+        url: url_users_db,
+        id: Number(targetId),
+        data: { username: newName },
+
+        onSuccess: () => {
+          console.log("更新成功");
+          fetchDb({ url: url_users_db, setState: setUserInfo });
+        },
+      });
+    }
+
+    // ④ DELETE（削除）
+    function handleDelete() {
+      const targetId = prompt("削除したいユーザーのidを入力");
+      if (!targetId) return;
+
+      deleteDb({
+        url: url_users_db,
+        id: targetId,
+        onSuccess: () => {
+          console.log("削除成功");
+          fetchDb({ url: url_users_db, setState: setUserInfo });
+        },
+      });
+    }
+
+    return (
+      <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
+        <button onClick={handleGet}>GET（取得）</button>
+        <button onClick={handleAdd}>POST（追加）</button>
+        <button onClick={handleUpdate}>PUT（更新）</button>
+        <button onClick={handleDelete}>DELETE（削除）</button>
+      </div>
+    );
+  }
+
+  // メインコンポーネントの中で
+  const renderModalContent = () => {
+    switch (activeMenu) {
+      case '天気':
+        return (
+          <div className="weather-forecast-details">
+            {forecastData ? forecastData.list.slice(0, 5).map((forecast, index) => {
+              const time = new Date(forecast.dt * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+              const temp = Math.round(forecast.main.temp);
+              const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
+              const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
+              return (
+                <div key={index} className="forecast-detail-item">
+                  <span className="forecast-detail-time">{time}</span>
+                  {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
+                  <span className="forecast-detail-temp">{temp}°C</span>
+                </div>
+              );
+            }) : <p>予報データを読み込み中です...</p>}
+          </div>
+        );
+
+      case '図鑑':
+        if (!userInfo || !creatures) return <p>データを読み込み中です...</p>;
+
+        const ownedCreatures = creatures.filter(c =>
+          userInfo.geted?.includes(Number(c.id)) // Number に変換してマッチ
+        );
+
+        return (
+          <div className="zukan-container">
+            <h3>{userInfo.username}の図鑑</h3>
+            {ownedCreatures.length > 0 ? (
+              <div className="creature-list">
+                {ownedCreatures.map(creature => (
+                  <div key={creature.id} className="creature-card">
+                    <img src={creature.img} alt={creature.creaturename} className="creature-img" />
+                    <div className="creature-info">
+                      <h4>{creature.creaturename}</h4>
+                      <p>{creature.description || "不明"}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>まだ仲間がいません！</p>
+            )}
+          </div>
+        );
 
 
 
-  
+      case 'フレンド':
+        return (
+          <div className="friend-container">
+            <h3>フレンド</h3>
+            <p>フレンドリストや追加機能などをここに実装</p>
+          </div>
+        );
+
+      case '設定':
+        return (
+          <div className="settings-container">
+            <h3>設定</h3>
+            <p>音量・通知・テーマ切り替えなどをここに実装</p>
+          </div>
+        );
+
+      case 'ヘルプ':
+        return (
+          <div className="help-container">
+            <h3>ヘルプ</h3>
+            <p>使い方・FAQ・問い合わせ先などをここに表示</p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+
+
+
+
 
 
   return (
     <>
-     <CrudTestButtons setUserInfo={setUserInfo} />
+      <CrudTestButtons setUserInfo={setUserInfo} />
       <pre>{JSON.stringify(userInfo, null, 2)}</pre>
 
-    <div className="app-container" style={backgroundStyle}>
-      <div className="sky">
-        {skyCharacters.map((char) => (
-          <img key={`sky-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
-        ))}
-      </div>
-      <div className="garden">
-        {groundCharacters.map((char) => (
-          <img key={`ground-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
-        ))}
-      </div>
-      <div className="weather-info">
-        <div className="current-weather">
-          {currentWeatherIcon && <img src={currentWeatherIcon} alt={`${weatherType} icon`} className="weather-icon-display" />}
-          {weatherData && <div className="location">{weatherData.name}</div>}
+      <div className="app-container" style={backgroundStyle}>
+
+        <div className="sky">
+          {skyCharacters.map((char) => (
+            <img key={`sky-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+          ))}
         </div>
-        <div className="forecast-container">
-          {forecastData && forecastData.list.slice(0, 3).map((forecast, index) => {
-            const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
-            const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
-            return (
-              <div key={index} className="forecast-item">
-                <span className="forecast-time">{(index + 1) * 3}時間後</span>
-                {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
-              </div>
-            );
-          })}
+
+        <div className="garden">
+          {groundCharacters.map((char) => (
+            <img key={`ground-${char.src}`} src={char.src} alt="character" className="character" style={char.style} onClick={() => handleCharacterClick(char)} />
+          ))}
         </div>
-      </div>
-      <div className="menu-container">
-        <div className="menu-button" onClick={toggleMenu}>
-          <span className="menu-bar-line"></span>
-          <span className="menu-bar-line"></span>
-          <span className="menu-bar-line"></span>
+
+        <div className="weather-info">
+          <div className="current-weather">
+            {currentWeatherIcon && <img src={currentWeatherIcon} alt={`${weatherType} icon`} className="weather-icon-display" />}
+            {weatherData && <div className="location">{weatherData.name}</div>}
+          </div>
+
+          <div className="forecast-container">
+            {forecastData && forecastData.list.slice(0, 3).map((forecast, index) => {
+              const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
+              const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
+              return (
+                <div key={index} className="forecast-item">
+                  <span className="forecast-time">{(index + 1) * 3}時間後</span>
+                  {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        {isMenuOpen && (
-          <div className="menu-bar">
-            <div className="menu-item" onClick={() => openMenuModal('天気')}>天気</div>
-            <div className="menu-item" onClick={() => openMenuModal('図鑑')}>図鑑</div>
-            <div className="menu-item" onClick={() => openMenuModal('フレンド')}>フレンド</div>
-            <div className="menu-item" onClick={() => openMenuModal('設定')}>設定</div>
-            <div className="menu-item" onClick={() => openMenuModal('ヘルプ')}>ヘルプ</div>
+
+        <div className="collection">
+
+
+
+        </div>
+
+
+
+
+        <div className="menu-container">
+          <div className="menu-button" onClick={toggleMenu}>
+            <span className="menu-bar-line"></span>
+            <span className="menu-bar-line"></span>
+            <span className="menu-bar-line"></span>
+          </div>
+          {isMenuOpen && (
+            <div className="menu-bar">
+              <div className="menu-item" onClick={() => openMenuModal('天気')}>天気</div>
+              <div className="menu-item" onClick={() => openMenuModal('図鑑')}>図鑑</div>
+              <div className="menu-item" onClick={() => openMenuModal('フレンド')}>フレンド</div>
+              <div className="menu-item" onClick={() => openMenuModal('設定')}>設定</div>
+              <div className="menu-item" onClick={() => openMenuModal('ヘルプ')}>ヘルプ</div>
+            </div>
+          )}
+        </div>
+
+        {capturedCharacter && (
+          <div className="modal-overlay" onClick={closeModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h2>キャラクターをゲット！</h2>
+              <img src={capturedCharacter.src} alt="ゲットしたキャラクター" className="captured-character-image" />
+              <p>{capturedCharacter.src.split('/').pop().replace(/\.\w+$/, '')}</p>
+              <button onClick={closeModal}>閉じる</button>
+            </div>
           </div>
         )}
+
+
+        {activeMenu && (
+          <div className="modal-overlay" onClick={closeMenuModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <h2>{activeMenu}</h2>
+              {renderModalContent()}
+              <button onClick={closeMenuModal}>閉じる</button>
+            </div>
+          </div>
+        )}
+
       </div>
-      {capturedCharacter && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>キャラクターをゲット！</h2>
-            <img src={capturedCharacter.src} alt="ゲットしたキャラクター" className="captured-character-image" />
-            <p>{capturedCharacter.src.split('/').pop().replace(/\.\w+$/, '')}</p>
-            <button onClick={closeModal}>閉じる</button>
-          </div>
-        </div>
-      )}
-      {activeMenu && (
-        <div className="modal-overlay" onClick={closeMenuModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>{activeMenu}</h2>
-            {activeMenu === '天気' ? (
-              <div className="weather-forecast-details">
-                {forecastData ? forecastData.list.slice(0, 5).map((forecast, index) => {
-                  const time = new Date(forecast.dt * 1000).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-                  const temp = Math.round(forecast.main.temp);
-                  const forecastWeatherType = mapApiIconToWeatherType(forecast.weather[0].icon);
-                  const forecastIconSrc = weatherAssets[forecastWeatherType]?.icon;
-                  return (
-                    <div key={index} className="forecast-detail-item">
-                      <span className="forecast-detail-time">{time}</span>
-                      {forecastIconSrc && <img src={forecastIconSrc} alt="forecast icon" />}
-                      <span className="forecast-detail-temp">{temp}°C</span>
-                    </div>
-                  );
-                }) : <p>予報データを読み込み中です...</p>}
-              </div>
-            ) : (
-              <p className="menu-modal-content">{menuContent[activeMenu]}</p>
-            )}
-            <button onClick={closeMenuModal}>閉じる</button>
-          </div>
-        </div>
-      )}
-    </div>
-    
+
     </>
-    
+
   );
 }
 export default App;

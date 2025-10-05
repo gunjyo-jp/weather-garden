@@ -1,8 +1,15 @@
 {
   "user": [
     {
-      "username": "omagari",
-      "id": "1"
+      "id": "1",
+      "username": "gunji",
+      "friend":[
+        "yusei"
+      ],
+      "weather":"Clear",
+      "geted":[
+        1,2,3,4
+      ]
     },
     {
       "id": "2",
@@ -12,18 +19,34 @@
       ],
       "weather": "Clouds",
       "geted": [
-        2,
-        3,
-        4
+        2,3,4
       ]
     }
   ],
   "creature": [
     {
       "id": "1",
-      "creaturename": "frogg",
+      "creaturename": "カエル",
       "description": "雨の日だけ来るよ",
-      "img": "/image/frog.img"
+      "img": "src/assets/character/cloudy_rainy/flog.png"
+    },
+    {
+      "id": "2",
+      "creaturename": "カナヘビ",
+      "description": "よくひなたぼっこをしているよ",
+      "img": "src/assets/character/cloudy_rainy/kanahebi.png"
+    },
+    {
+      "id": "3",
+      "creaturename": "みみず",
+      "description": "ひからびてるときがある",
+      "img": "src/assets/character/cloudy_rainy/mimizu.png"
+    },
+    {
+      "id": "4",
+      "creaturename": "とんぼ",
+      "description": "めがおおきいね",
+      "img": "src/assets/character/sunny/tonbo.png"
     }
   ]
 }

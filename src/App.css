@@ -267,3 +267,37 @@
     transform: translateY(0);
   }
 }
+
+
+.zukan-container {
+  padding: 1rem;
+}
+
+.creature-list {
+  display: flex;
+  flex-wrap: wrap; /* 横並びで改行 */
+  gap: 1rem;       /* カード間の隙間 */
+}
+
+.creature-card {
+  flex: 1 1 calc(50% - 1rem); /* デフォルトは2列 */
+  background: #f7f7f7;
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.creature-img {
+  width: 100%;          /* カード幅に合わせる */
+  height: auto;         /* 縦横比を維持 */
+  max-height: 150px;    /* 高さ制限 */
+  object-fit: contain;  /* はみ出し防止 */
+}
+
+.creature-info h4 {
+  margin: 0.5rem 0 0.25rem;
+}
+
+.creature-info
+
