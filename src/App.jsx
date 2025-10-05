@@ -139,6 +139,7 @@ function App() {
         .then(json => setUserInfo(json))
         .catch(err => console.error("User GET error:", err));
     }
+    console.log(userInfo,"test");
   }, [activeMenu]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -210,6 +211,7 @@ function App() {
       case '図鑑':
         if (!userInfo || !creatures) return <p>読み込み中...</p>;
         const ownedCreatures = creatures.filter(c => userInfo.geted?.includes(Number(c.id)));
+        console.log(userInfo);
         return (
           <div className="zukan-container">
             <h3>{userInfo.username}の図鑑</h3>
