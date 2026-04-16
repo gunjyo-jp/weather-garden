@@ -1,8 +1,29 @@
-# React + Vite
+# Weather Garden 🌦️🐛
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**「ついつい開きたくなるお天気アプリ」**
+天気予報といきもの採集を組み合わせた、新しいアプローチの天気予報アプリケーションです。
 
-Currently, two official plugins are available:
+## 🏆 実績
+**[かごがくハッカソン 2025](https://tech.pepabo.com/2025/10/16/kagogaku-hackathon-2025/) ユニマル賞（企業賞）受賞** 🎉
+（チーム「sdora」として開発）
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**審査員（株式会社ユニマル 今熊代表）からのコメント：**
+> 「アイデアがユニークで、天気予報を見るモチベーションを高める工夫が素晴らしい」
+> 「天気という日常的な情報に、ゲーム要素を組み合わせたUXやデザインが良い」
+
+## 💡 開発の背景と目的
+「今にも降り出しそうな空模様、天気予報を見るのがすこし憂鬱になりませんか？」
+そんな日常の課題から出発し、「楽しく天気予報が見れるようにしたい」という想いで開発しました。ユーザー体験（UX）の設計にこだわり、実用性とゲーム要素を両立させています。
+
+## ✨ 主な機能
+* **天気予報機能:** 現在地のリアルタイムの天気や、数時間後ごとの予報を確認できます。実際の天気によってアプリの背景も切り替わります。
+* **いきもの採集機能:** 地域や天気によって出現する生き物が変化します。地域特有のいきもの画像は生成AIを活用して作成しています。
+* **図鑑機能:** 自分が捕まえた生き物をコレクションして眺めることができます。
+
+## 🛠 使用技術
+* **フロントエンド:** React, Vite
+* **バックエンド (APIモック):** json-server
+* **AI・画像生成:** Gemini Nano （画像生成AI）
+
+## 📷 画面イメージ
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/6acae4ec-9460-45ff-a25c-15198bf3464b" />
